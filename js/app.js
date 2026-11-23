@@ -12,7 +12,7 @@ const todayIso = () => { const d = new Date(); return d.getFullYear() + '-' + pa
 const fmtDate = (iso) => { if (!iso) return ''; const d = new Date(iso + 'T12:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
 const fmtDateShort = (iso) => { if (!iso) return ''; const d = new Date(iso + 'T12:00:00'); return isNaN(d) ? iso : d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }); };
 const pct = C.pctStr, eff = C.effStr, num = C.numStr;
-const ROUTES = ['uebersicht', 'live', 'spiele', 'spieler', 'daten'];
+const ROUTES = ['uebersicht', 'live', 'spiele', 'spieler', 'daten', 'kader'];
 const BACKUP_DAYS = 14;
 const DEFAULT_SETTINGS = { teamName: '', season: seasonOf(todayIso()), level: 'bezirk', targets: {}, format: { mode: 'bo5', pts: 25, tb: 15 }, rev: 0 };
 function seasonOf(iso) { const y = +iso.slice(0, 4), m = +iso.slice(5, 7); const s = m >= 7 ? y : y - 1; return s + '/' + String((s + 1) % 100).padStart(2, '0'); }
@@ -39,7 +39,7 @@ function demoData() {
 }
 function realPlayers() { return Object.values(S.players).filter((p) => p && p.id); }
 function realGames() { return Object.values(S.games).filter((g) => g && g.id && !g.practice); }
-function isDemo() { return S.loaded && !S.ui.demoOff && realPlayers().length === 0 && realGames().length === 0; }
+function isDemo() { return S.loaded && !S.settings.demoOff && realPlayers().length === 0 && realGames().length === 0; }
 function rosterMap() { return isDemo() ? demoData().map : S.players; }
 function rosterList(includeInactive) {
   const list = isDemo() ? demoData().roster : realPlayers();
@@ -175,6 +175,7 @@ function afterLoad() {
   restoreBackups();
   const liveOnes = realGames().filter((g) => g.status === 'live').sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   if (!S.live.gameId && liveOnes.length) S.live.gameId = liveOnes[0].id;
+  if (HOOK.afterLoad) HOOK.afterLoad();
   render();
 }
 
@@ -196,7 +197,7 @@ function setSync(state, msg) {
 function parseHash() {
   const h = (location.hash || '').replace(/^#/, '');
   if (/^[kt]=/.test(h)) return { route: 'karte', id: null };
-  const m = h.match(/^(spiel|spieler|details)-([a-z0-9]+)$/);
+  const m = h.match(/^(spiel|spieler|details|video)-([a-z0-9]+)$/);
   if (m) return { route: m[1], id: m[2] };
   return { route: ROUTES.includes(h) ? h : 'uebersicht', id: null };
 }
@@ -222,13 +223,15 @@ function render() {
 function renderNow() {
   const nameEl = $('#teamName'); if (nameEl) nameEl.textContent = S.settings.teamName || 'Volleyball Scouting';
   const sEl = $('#seasonLbl'); if (sEl) sEl.textContent = 'Saison ' + (S.settings.season || '');
-  $$('#tabs a').forEach((a) => a.classList.toggle('on', a.dataset.r === (S.route === 'spiel' || S.route === 'details' ? 'spiele' : S.route)));
+  const dl = $('#datenLink'); if (dl) dl.classList.toggle('on', S.route === 'daten');
+  $$('#tabs a').forEach((a) => a.classList.toggle('on', a.dataset.r === (S.route === 'spiel' || S.route === 'details' || S.route === 'video' ? 'spiele' : S.route === 'kader' ? 'spieler' : S.route)));
   setSync(S.sync.state, S.sync.msg);
   const banner = $('#banner');
   if (banner) {
     let b = '';
     if (!S.loaded) b = '<div class="banner"><span class="spin" aria-hidden="true"></span> Daten werden geladen …</div>';
-    else if (isDemo() && S.route !== 'daten' && S.route !== 'live') b = '<div class="banner demo"><b>Beispieldaten.</b> So sehen eure Auswertungen aus. Sie verschwinden, sobald ihr euren Kader anlegt. <a href="#spieler">Kader anlegen</a></div>';
+    else if (isDemo() && S.route !== 'daten' && S.route !== 'live') b = '<div class="banner demo"><b>Beispieldaten.</b> So sehen eure Auswertungen aus. Mit dem eigenen Kader fängst du komplett neu an. <button class="link" data-act="kaderneu">Kader anlegen</button> oder <button class="link" data-act="testdaten">Testdaten laden</button> zum Ausprobieren.</div>';
+    else if (realGames().some((g) => g.test) && S.route !== 'daten' && S.route !== 'live' && S.route !== 'kader') b = '<div class="banner demo"><b>Testdaten.</b> Ein Beispielteam mit sechs gescouteten Spielen zum Ausprobieren. <button class="link" data-act="kaderneu">Eigenen Kader anlegen</button> ersetzt sie.</div>';
     else if (backupDue() && S.route !== 'daten') b = '<div class="banner demo"><b>Backup fällig.</b> Eure Daten liegen nur auf diesem Gerät. <a href="#daten" data-act="tobackup">Jetzt sichern</a></div>';
     banner.innerHTML = b;
   }
@@ -554,9 +557,9 @@ function liveStartHtml() {
   }
   if (!roster.length) {
     return h + emptyState('Erst den Kader anlegen', 'Lege eure Spielerinnen und Spieler mit Rückennummer an. Danach kannst du hier ein Spiel starten.',
-      '<div class="row"><button class="btn primary" data-act="bulkadd">Kader eintragen</button></div>');
+      '<div class="row center"><button class="btn primary" data-act="kaderneu">Kader anlegen</button></div>');
   }
-  if (demo) h += '<div class="banner demo"><b>Übungsmodus mit Beispielkader.</b> Probiere die Eingabe aus – das Spiel wird nicht gespeichert. <button class="btn small" data-act="bulkadd">Eigenen Kader anlegen</button></div>';
+  if (demo) h += '<div class="banner demo"><b>Übungsmodus mit Beispielkader.</b> Probiere die Eingabe aus – das Spiel wird nicht gespeichert. <button class="btn small" data-act="kaderneu">Eigenen Kader anlegen</button></div>';
   const f = S.settings.format || { mode: 'bo5', pts: 25, tb: 15 };
   h += '<form class="card form" id="newGameForm"><h2>' + (demo ? 'Übungsspiel starten' : 'Neues Spiel') + '</h2>' +
     '<div class="grid2">' +
@@ -742,7 +745,7 @@ function liveLayoutHtml(g) {
     '<div class="dict-meta"><label class="tg"><input type="checkbox" id="dictAuto"' + (auto ? ' checked' : '') + '> nach Sprechpause automatisch übernehmen</label>' +
     '<button type="button" class="link" data-act="cmdhelp">Befehle</button></div>' +
     '</div>' +
-    '</div><aside class="lv-side">' + video + '<div id="lv-ana" class="card"></div><div id="lv-log" class="card"></div></aside></div></div></section>';
+    '</div><aside class="lv-side">' + video + '<div id="lv-ana" class="card"></div>' + (g.videoFile ? '<div id="lv-rl" class="card"></div>' : '') + '<div id="lv-log" class="card"></div></aside></div></div></section>';
 }
 
 function updateLive(g, a) {
@@ -759,7 +762,7 @@ function updateLive(g, a) {
     '<div class="sb-row"><span class="sb-sets us" title="Sätze ' + esc(team) + '">' + a.setsU + '</span>' +
     '<div class="sb-sc"><span class="srv-i ' + (c.srv === 'u' ? 'on' : '') + '" aria-hidden="true">' + ICON.ball + '</span><span class="u" id="scU">' + c.u + '</span><span class="col">:</span><span class="t" id="scT">' + c.t + '</span><span class="srv-i ' + (c.srv === 't' ? 'on' : '') + '" aria-hidden="true">' + ICON.ball + '</span></div>' +
     '<span class="sb-sets them" title="Sätze ' + esc(g.opponent) + '">' + a.setsT + '</span></div>' +
-    '<div class="sb-m">Satz ' + c.set + ' · bis ' + c.target + (c.rot ? ' · Läufer auf ' + C.POS[c.rot - 1] : '') + '<span class="sr"> · Aufschlag ' + (c.srv === 'u' ? 'wir' : 'Gegner') + '</span></div></div>' +
+    '<div class="sb-m">Satz ' + c.set + ' · bis ' + c.target + (c.rot ? ' · ' + (HOOK.rotGlyph ? HOOK.rotGlyph(c.rot) + ' ' : '') + 'Läufer auf ' + C.POS[c.rot - 1] : '') + '<span class="sr"> · Aufschlag ' + (c.srv === 'u' ? 'wir' : 'Gegner') + '</span></div></div>' +
     '<div class="sb-bar"><span class="sb-pills">' + sets.map((s) => '<span class="pill ' + (s.w === 'u' ? 'win' : 'loss') + '">' + s.u + ':' + s.t + '</span>').join('') + run + '</span>' +
     '<span class="sb-tools"><button class="chip clock' + (paused ? ' paused' : '') + '" data-act="clock" title="Scouting-Uhr für Video-Zeitstempel – antippen zum Pausieren">' + (paused ? ICON.play : ICON.pause) + '<span id="lvClock">' + C.hms(clockMs(g) / 1000) + '</span></button>' +
     '<button class="btn small" data-act="undo" id="btnUndo" aria-label="Rückgängig">' + ICON.undo + '<span class="lbl-w">Rückgängig</span></button><button class="btn small" data-act="livemenu" id="btnMenu" aria-label="Mehr">' + ICON.more + '<span class="lbl-w">Mehr</span></button>' +
@@ -825,6 +828,7 @@ function updateLive(g, a) {
   renderFeed();
   renderLiveAna(g, a);
   renderLiveLog(g, a);
+  if (HOOK.liveRallies) HOOK.liveRallies(g, a);
 }
 function evChip(e, i) {
   if (!e) return '';
@@ -1372,10 +1376,10 @@ function gameFormat(g) { const f = (g && g.format) || {}; const d = S.settings.f
 /* ------------------------------------------------------------ Übersicht */
 VIEWS.uebersicht = function (view) {
   const games = filteredGames();
-  let h = '<div class="page-h"><h1>Übersicht</h1>' + (statsGames().length ? filterRow() : '') + '</div>';
+  let h = '<div class="page-h"><h1>Saison</h1>' + (statsGames().length ? filterRow() : '') + '</div>';
   if (!games.length) {
     view.innerHTML = h + emptyState('Noch keine Spiele', 'Scoute euer nächstes Spiel aus dem Video oder live, oder trage ein vergangenes Spiel mit seinen Statistiken nach.',
-      '<div class="row center"><a class="btn primary" href="#live">Spiel scouten</a><a class="btn" href="#daten">Spiel nachtragen</a></div>');
+      realPlayers().length ? '<div class="row center"><a class="btn primary" href="#live">Spiel scouten</a><a class="btn" href="#daten">Spiel nachtragen</a></div>' : '<div class="row center"><button class="btn primary" data-act="kaderneu">Kader anlegen</button></div>');
     return;
   }
   const an = games.map(analysis); const agg = C.aggregate(an); const T = targets();
@@ -1398,7 +1402,8 @@ VIEWS.uebersicht = function (view) {
     '<div class="tafel-form"><dt>Letzte Spiele</dt><dd class="form-row">' + lastFive.map(formChip).join('') + '</dd></div></dl></section>';
   h += '<div class="dash">';
   h += '<section class="card span2 focus-card"><div class="card-h"><h2>Trainingsfokus</h2><span class="muted small">größte Baustellen nach Punkten pro Satz</span></div>' + focusHtml(ins) + '</section>';
-  h += '<section class="card span2"><div class="card-h"><h2>Kennzahlen</h2><span class="muted small">Verlauf über die Spiele, Linie = Ziel</span></div><div class="kpis">' + kpiTiles(agg, T) + '</div></section>';
+  h += (HOOK.whyHtml ? HOOK.whyHtml(games, true) : '') + (HOOK.linkedHtml ? HOOK.linkedHtml(games) : '');
+  h += '<section class="card span2"><details><summary class="card-sum">Alle Kennzahlen im Verlauf <span class="muted small">Linie = Ziel</span></summary><div class="kpis">' + kpiTiles(agg, T) + '</div></details></section>';
   h += '<section class="card span2">' + detailTabsHtml(agg, 'dashTab') + '</section>';
   h += '<section class="card span2"><div class="card-h"><h2>Letzte Spiele</h2><a href="#spiele" class="small">Alle</a></div>' + gameListHtml(games.slice().reverse().slice(0, 5), true) + '</section>';
   h += '</div>';
@@ -1639,7 +1644,7 @@ VIEWS.spiel = function (view) {
   if (!g) { view.innerHTML = emptyState('Spiel nicht gefunden', 'Vielleicht wurde es gelöscht.', '<a class="btn" href="#spiele">Zu den Spielen</a>'); return; }
   const a = analysis(g); const m = C.metrics(a.team); const r = a.rk ? C.rkMetrics(a.rk) : null;
   const T = targets();
-  const tabs = [['ueberblick', 'Überblick'], ['box', 'Boxscore']].concat(a.live ? [['verlauf', 'Verlauf'], ['phasen', 'Rotationen & Phasen'], ['zonen', 'Zonen'], ['protokoll', 'Protokoll']] : []);
+  const tabs = [['ueberblick', 'Überblick']].concat(a.live && !g.minimal ? [['warum', 'Warum?']] : []).concat(a.live ? [['rotzonen', 'Rotation & Zonen']] : []).concat([['box', 'Boxscore']]).concat(a.live ? [['protokoll', 'Protokoll']] : []);
   if (!tabs.some((t) => t[0] === S.ui.gameTab)) S.ui.gameTab = 'ueberblick';
   const editable = !S.readOnly && !g.demo;
   let h = '<a href="#spiele" class="back">' + ICON.chev + ' Spiele</a><div class="page-h game-h"><div><h1>' + esc(g.opponent || 'Spiel') + ' ' + resultPill(a) + '</h1>' +
@@ -1647,29 +1652,34 @@ VIEWS.spiel = function (view) {
     '<div class="setline">' + (a.noResult ? '<span class="muted small">' + (a.team.sets ? a.team.sets + ' Sätze · ' : '') + 'Ergebnis noch nicht eingetragen' + (editable ? ' – über „Bearbeiten“ nachtragen' : '') + '</span>' : a.sets.map((s) => '<span class="pill ' + (s.w === 'u' ? 'win' : s.w === 't' ? 'loss' : '') + '">' + s.u + ':' + s.t + (s.done ? '' : ' …') + '</span>').join('')) + '</div></div>' +
     '<div class="row">' + (editable && g.status === 'live' ? '<button class="btn primary" data-act="resume" data-id="' + g.id + '">Weiter scouten</button>' : '') +
     (editable ? '<button class="btn" data-act="gedit">Bearbeiten</button>' + (a.live ? (HOOK.gameButtons ? HOOK.gameButtons(g) : '') + '<button class="btn" data-act="gvideo">' + ICON.video + ' Video</button>' : '') : '') +
-    '<button class="btn" data-act="gcsv">CSV</button>' + (editable ? '<button class="btn danger ghost" data-act="gdel">Löschen</button>' : '') + '</div></div>';
+    (a.live ? '<a class="btn" href="#video-' + g.id + '">' + ICON.video + ' Videoanalyse</a>' : '') + '<button class="btn" data-act="gcsv">CSV</button>' + (editable ? '<button class="btn danger ghost" data-act="gdel">Löschen</button>' : '') + '</div></div>';
   h += '<nav class="subtabs" aria-label="Bereiche">' + tabs.map((t) => '<button class="' + (S.ui.gameTab === t[0] ? 'on' : '') + '" data-act="gtab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</nav>';
   const tab = S.ui.gameTab;
   if (tab === 'ueberblick') {
     const agg = C.aggregate([a]); const ins = C.insights(agg, T, pShort);
     if (editable && a.live) h += openListHtml(g, a, 'detail');
-    h += '<div class="dash"><section class="card span2"><div class="card-h"><h2>Kennzahlen</h2></div><div class="kpis">' +
+    const linked = a.live && HOOK.linkedHtml ? HOOK.linkedHtml([g]) : '';
+    h += '<div class="dash">' + (HOOK.lineupsHtml ? HOOK.lineupsHtml(g) : '') + '<section class="card span2"><div class="card-h"><h2>Fokus aus diesem Spiel</h2></div>' + focusHtml(ins) + '</section>' + linked;
+    h += '<section class="card span2"><' + (linked ? 'details><summary class="card-sum">Alle Kennzahlen gegen die Ziele</summary>' : 'div><div class="card-h"><h2>Kennzahlen</h2></div>') + '<div class="kpis">' +
       kpiTile('Side-out', r ? pct(r.so) : '–', r ? r.recvW + '/' + r.recvR : 'nur live', r ? statusChip(r.so, T.so, 'min') : '') +
       kpiTile('Break-Punkte', r ? pct(r.bp) : '–', r ? r.srvW + '/' + r.srvR : 'nur live', r ? statusChip(r.bp, T.bp, 'min') : '') +
       kpiTile('Annahme-Schnitt', m.rAvg !== null ? num(m.rAvg, 2) : '–', recSub(m), statusChip(m.rAvg, T.recAvg, 'min', 'avg')) +
       kpiTile('Angriffseffizienz', eff(m.aEff), m.aKill + '/' + m.aAtt + ' Kills', statusChip(m.aEff, T.attEff, 'min', 'eff')) +
       kpiTile('Aufschlag', m.sAce + ' Asse', m.sErr + ' Fehler (' + pct(m.sErrP) + ')', statusChip(m.sErrP, T.srvErr, 'max')) +
-      kpiTile('Block', (a.tracked && a.tracked.B === false) ? '–' : m.bPts + ' Punkte', (a.tracked && a.tracked.B === false) ? 'auf dem Bogen nicht erfasst' : m.bTouch + ' Touches · ' + m.bErr + ' Fehler', '') + '</div></section>';
-    h += '<section class="card span2"><div class="card-h"><h2>Fokus aus diesem Spiel</h2></div>' + focusHtml(ins) + '</section>';
+      kpiTile('Block', (a.tracked && a.tracked.B === false) ? '–' : m.bPts + ' Punkte', (a.tracked && a.tracked.B === false) ? 'auf dem Bogen nicht erfasst' : m.bTouch + ' Touches · ' + m.bErr + ' Fehler', '') + '</div></' + (linked ? 'details' : 'div') + '></section>';
     if (r) h += '<section class="card"><div class="card-h"><h2>Woher die Punkte kommen</h2></div>' + pointSourcesHtml(r) + '</section>';
     h += '<section class="card"><div class="card-h"><h2>Beste Werte</h2></div>' + topPlayersHtml(a) + '</section></div>';
+  } else if (tab === 'warum') {
+    h += HOOK.whyHtml ? HOOK.whyHtml([g]) : '';
   } else if (tab === 'box') {
     const bv = S.ui.boxView || 'box';
     h += '<div class="card"><nav class="subtabs inner" aria-label="Ansicht">' + [['box', 'Boxscore']].concat(STAT_VIEWS).map(([k, l]) => '<button class="' + (bv === k ? 'on' : '') + '" data-act="boxview" data-v="' + k + '">' + l + '</button>').join('') + '</nav>' +
       (bv === 'box' ? '<div class="tbl-wrap">' + boxscoreHtml(a, g) + '</div><p class="small muted">BP = Breakpunkte (eigene Punkte bei eigenem Aufschlag) · G-V = Punkte minus Fehler · Perf = Anteil Annahme 3 (perfekt) · Ø = Annahme-Schnitt · Blo = geblockt · Eff = (Kills − Fehler − geblockt) / Angriffe.</p>'
         : statTableHtml(playerRows(a.players), a.team, bv, { sortKey: 'sortG' })) + '</div>';
     if (Array.isArray(g.setTeam) && g.setTeam.length) h += '<div class="card mt"><div class="card-h"><h2>Team je Satz</h2><span class="muted small">laut Statistikbogen</span></div>' + setTeamHtml(g.setTeam) + '</div>';
-  } else if (tab === 'verlauf') {
+  }
+  if (tab === 'ueberblick' && a.live && a.sets.length) {
+    h += '<h2 class="sec-h">Verlauf der Sätze</h2>';
     h += '<div class="dash">' + a.sets.map((s) => {
       const tl = a.tl[s.no] || [[0, 0]];
       const tos = []; let rallyCount = 0; let inSet = false;
@@ -1679,13 +1689,15 @@ VIEWS.spiel = function (view) {
         '<div class="legend"><span><i class="sw a-us"></i>Führung ' + esc(S.settings.teamName || 'wir') + '</span><span><i class="sw a-them"></i>Führung Gegner</span>' + (tos.length ? '<span><i class="sw tom"></i>Auszeit</span>' : '') + '</div>' +
         (runs.length ? '<p class="small">Serien: ' + runs.map((x) => '<span class="pill ' + (x.w === 'u' ? 'win' : 'loss') + '">' + (x.w === 'u' ? x.len + ':0' : '0:' + x.len) + ' ab ' + x.start.join(':') + (x.rot ? ', Läufer ' + C.POS[x.rot - 1] : '') + '</span>').join(' ') + '</p>' : '') + '</section>';
     }).join('') + '</div>';
-  } else if (tab === 'phasen') {
+  } else if (tab === 'rotzonen') {
     h += '<div class="dash"><section class="card"><div class="card-h"><h2>Rotationen</h2></div>' + rotationHtml(r) + '</section>' +
       '<section class="card"><div class="card-h"><h2>Annahme → Side-out</h2></div>' + recChainHtml(r) + '</section>' +
       '<section class="card"><div class="card-h"><h2>Angriff nach Situation</h2></div>' + attackSplitHtml(m, r) + '</section>' +
       '<section class="card"><div class="card-h"><h2>Aufschlag → Break</h2></div>' + serveChainHtml(r) + '</section>' +
       '<section class="card"><div class="card-h"><h2>Schlussphase & Serien</h2></div>' + crunchHtml(r) + '</section></div>';
-  } else if (tab === 'zonen') {
+  }
+  if (tab === 'rotzonen') {
+    h += '<h2 class="sec-h">Zonen</h2>';
     h += HOOK.zonesHtml ? HOOK.zonesHtml(g, a) : '';
   } else if (tab === 'protokoll') {
     h += '<div class="card">' + protocolHtml(g, a, editable) + '</div>';
@@ -1842,8 +1854,8 @@ VIEWS.spieler = function (view) {
   const showArch = !!S.ui.showArchived;
   const list = rosterList(true).filter((p) => showArch || p.active !== false);
   const games = filteredGames(); const an = games.map(analysis); const agg = C.aggregate(an);
-  let h = '<div class="page-h"><h1>Spieler</h1><div class="row">' + (S.readOnly || isDemo() && false ? '' : '<button class="btn primary" data-act="padd">' + ICON.plus + ' Spieler</button><button class="btn" data-act="bulkadd">Mehrere eintragen</button>') + '</div></div>';
-  if (!list.length) { view.innerHTML = h + emptyState('Noch kein Kader', 'Trage eure Spielerinnen und Spieler mit Rückennummer und Position ein. Am schnellsten: „Mehrere eintragen“.', '<button class="btn primary" data-act="bulkadd">Kader eintragen</button>'); return; }
+  let h = '<div class="page-h"><h1>Kader</h1><div class="row">' + (S.readOnly ? '' : isDemo() ? '<button class="btn primary" data-act="kaderneu">Eigenen Kader anlegen</button>' : '<button class="btn primary" data-act="padd">' + ICON.plus + ' Spieler</button><button class="btn" data-act="bulkadd">Mehrere eintragen</button>' + (realPlayers().length ? '<button class="btn ghost" data-act="kaderneu">Neuer Kader</button>' : '')) + '</div></div>';
+  if (!list.length) { view.innerHTML = h + emptyState('Noch kein Kader', 'Trage eure Spielerinnen und Spieler mit Rückennummer und Position ein. Danach kannst du direkt ein Spiel scouten.', '<div class="row center"><button class="btn primary" data-act="kaderneu">Kader anlegen</button></div>'); return; }
   if (statsGames().length) h += filterRow();
   const pv = S.ui.plView || 'kompakt';
   h += '<nav class="subtabs" aria-label="Ansicht">' + [['kompakt', 'Übersicht']].concat(STAT_VIEWS).map(([k, l]) => '<button class="' + (pv === k ? 'on' : '') + '" data-act="plview" data-v="' + k + '">' + l + '</button>').join('') + '</nav>';
@@ -2028,12 +2040,11 @@ function parseBulk(txt) {
 /* ------------------------------------------------------------ Daten: Nachtragen, Import, Export, Einstellungen */
 VIEWS.daten = function (view) {
   const tab = S.ui.dataTab || 'import';
-  const tabs = [['import', 'Spiel nachtragen'], ['export', 'Export & Backup'], ['settings', 'Einstellungen'], ['pilot', 'Pilot-Test'], ['hilfe', 'Hilfe']];
+  const tabs = [['import', 'Spiel nachtragen'], ['export', 'Export & Backup'], ['settings', 'Einstellungen'], ['hilfe', 'Hilfe']];
   let h = '<div class="page-h"><h1>Daten</h1></div><nav class="subtabs">' + tabs.map((t) => '<button class="' + (tab === t[0] ? 'on' : '') + '" data-act="dtab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</nav>';
   if (tab === 'import') { h += importHtml(); setTimeout(() => { const f = $('#impForm'); if (f) markImport(f); }, 0); }
   else if (tab === 'export') h += exportHtml();
   else if (tab === 'settings') h += settingsHtml() + (HOOK.settingsExtra ? HOOK.settingsExtra() : '');
-  else if (tab === 'pilot') h += HOOK.pilotHtml ? HOOK.pilotHtml() : '';
   else h += helpHtml();
   view.innerHTML = h;
 };
@@ -2053,7 +2064,7 @@ function boxGet(b, f) { if (!b) return ''; const [a, k] = f.split('.'); const v 
 function importHtml() {
   if (S.readOnly) return '<p class="muted">Nur Ansicht.</p>';
   const roster = rosterList();
-  if (!roster.length || isDemo()) return emptyState('Erst den Kader anlegen', 'Zum Nachtragen braucht das Tool eure Spieler.', '<button class="btn primary" data-act="bulkadd">Kader eintragen</button>');
+  if (!roster.length || isDemo()) return emptyState('Erst den Kader anlegen', 'Zum Nachtragen braucht das Tool eure Spieler.', '<div class="row center"><button class="btn primary" data-act="kaderneu">Kader anlegen</button></div>');
   const eg = S.ui.impEdit ? gameById(S.ui.impEdit) : null;
   const box = (eg && eg.box) || {};
   const ids = roster.map((p) => p.id); Object.keys(box).forEach((pid) => { if (pid !== '_team' && !ids.includes(pid) && player(pid)) ids.push(pid); });
@@ -2212,14 +2223,17 @@ function exportHtml() {
     (S.readOnly ? '' : '<h3>Backup einspielen</h3><p class="small muted">Führt die Datei mit den vorhandenen Daten zusammen. Bei demselben Spiel gewinnt die zuletzt bearbeitete Fassung.</p><input type="file" id="impJson" accept=".json,application/json">') + '</section>' +
     '<section class="card"><h2>Saisonstatistik als CSV</h2><p>Spielerwerte der aktuell gefilterten Spiele für Excel oder Numbers (Semikolon-getrennt).</p>' + (statsGames().length ? filterRow() : '') +
     '<div class="row"><button class="btn" data-act="expcsv">CSV herunterladen</button></div></section>' +
-    (S.mode === 'local' && !S.readOnly ? '<section class="card"><h2>Daten in diesem Browser</h2><p class="small">Die Daten liegen nur in diesem Browser. Vor dem Löschen am besten ein Backup herunterladen.</p><div class="row"><button class="btn danger ghost" data-act="localwipe">Alle Daten in diesem Browser löschen</button></div></section>' : '') + '</div>';
+    (S.mode === 'local' && !S.readOnly ? '<section class="card"><h2>Daten in diesem Browser</h2><p class="small">Die Daten liegen nur in diesem Browser. Vor dem Löschen am besten ein Backup herunterladen.</p><div class="row"><button class="btn" data-act="testdaten">Testdaten laden</button>' + (realGames().some((x) => x.test) ? '<button class="btn ghost" data-act="testweg">Testdaten entfernen</button>' : '') + '<button class="btn danger ghost" data-act="localwipe">Alle Daten in diesem Browser löschen</button></div><p class="small muted">Testdaten: der Beispielkader mit seinen gescouteten Spielen, den du ändern und löschen kannst. Ein Video ist nicht dabei.</p></section>' : '') + '</div>';
 }
 ACT.localwipe = async () => {
   if (!(await confirmBox('Alle Daten löschen?', 'Spieler, Spiele und Einstellungen in diesem Browser werden gelöscht. Das lässt sich nicht rückgängig machen.', 'Endgültig löschen', true))) return;
-  S.players = {}; S.games = {}; S.settings = Object.assign({}, DEFAULT_SETTINGS); S.live.gameId = null; aCache.clear(); bumpRoster();
-  lsDel(LS_KEY); await Store.wipe(); try { Object.keys(localStorage).filter((k) => k.indexOf('vst:live:') === 0).forEach(lsDel); } catch (e) { /* egal */ }
+  await wipeAll();
   toast('Daten gelöscht.'); go('uebersicht');
 };
+async function wipeAll() {
+  S.players = {}; S.games = {}; S.settings = Object.assign({}, DEFAULT_SETTINGS); S.live.gameId = null; aCache.clear(); bumpRoster();
+  lsDel(LS_KEY); await Store.wipe(); try { Object.keys(localStorage).filter((k) => k.indexOf('vst:live:') === 0).forEach(lsDel); } catch (e) { /* egal */ }
+}
 ACT.expjson = () => {
   const games = {}; realGames().forEach((g) => { games[g.id] = g; });
   S.settings.lastBackupAt = Date.now(); Store.saveSettings();
@@ -2296,13 +2310,13 @@ document.addEventListener('submit', (e) => {
 document.addEventListener('change', (e) => { if (e.target.id === 'stLevel') { S.settings.level = e.target.value; render(); } });
 function helpHtml() {
   return '<div class="dash"><section class="card span2"><h2>So scoutet ihr ein Spiel</h2><ol class="steps">' +
-    '<li><b>Kader anlegen</b> unter Spieler – mit Nummer und Position.</li>' +
+    '<li><b>Kader anlegen</b> unter Kader – mit Nummer und Position. Zum Ausprobieren lädt „Testdaten laden“ unter Daten einen Beispielkader mit sechs Spielen.</li>' +
     '<li><b>Scouten → Neues Spiel</b>: Gegner eintragen, Kader abhaken, Video-Datei wählen oder „Live in der Halle“.</li>' +
     '<li><b>Schnitt erstellen</b> (nur mit Video): Die App sucht die Ballwechsel und überspringt beim Scouten die Pausen. Danach reichen Leertaste, N und die Aktionsknöpfe.</li>' +
     '<li><b>Satz starten</b>: wer schlägt auf, Startaufstellung mit Zuspieler (für Rotationen und automatischen Aufschläger). Die Rotation heißt nach der Position des Zuspielers („Läufer auf I“ = Zuspieler auf Position I).</li>' +
     '<li><b>Scouten</b>: Spieler antippen → Aktion antippen – oder erst die Aktion und danach den Spieler. Oder in das Textfeld diktieren. Gegner-Aktionen über „Gegnerfehler“ und „Gegnerpunkt“. Fehlt ein Spieler oder wurde eine Ansage nicht verstanden, steht der Eintrag unter <b>Offen</b> und lässt sich mit einem Tipp nachtragen.</li>' +
     '<li><b>Satzende</b> erkennt das Tool und fragt nach. Danach den nächsten Satz einstellen.</li>' +
-    '<li><b>Auswerten</b>: Übersicht zeigt den Trainingsfokus, Spiele den Spielbericht, Spieler die Profile.</li></ol>' +
+    '<li><b>Auswerten</b>: Saison zeigt den Trainingsfokus, Spiele den Spielbericht, Kader die Profile.</li></ol>' +
     '<p class="small muted">Tipp: Ein Ballwechsel endet immer mit genau einem Punkt-Eintrag (Kill, Ass, Block, Fehler oder Gegnerpunkt/-fehler). Nur dann stimmen Spielstand, Aufschlag und Rotation.</p></section>' +
     '<section class="card span2"><h2>Sprach- und Textbefehle</h2>' + cmdHelpHtml() + '</section>' +
     '<section class="card span2"><h2>Bewertungsskala</h2><p class="small muted">Angelehnt an das DVV-Scouting-Codebook. Zahlen: 3 = beste Stufe.</p><div class="tbl-wrap"><table class="tbl scale"><thead><tr><th>Aktion</th><th>Stufe</th><th>Bedeutung</th></tr></thead><tbody>' +
@@ -2316,7 +2330,7 @@ window.addEventListener('hashchange', onRoute);
 window.VST = {
   S, C, Store, HOOK, ACT, VIEWS, ICON, $, $$, esc, modal, toast, confirmBox, blocked, offerFile, selectHtml, emptyState, kpiTile, render, go,
   analysis, isDemo, player, pLabel, pShort, pFull, pNo, hasNo, liveGame, rosterMap, rosterList, realGames, statsGames, gameById, filteredGames,
-  targets, fmtDate, fmtDateShort, todayIso, pct, eff, num, lsGet, lsSet, logEv, demoData, seasonOf,
+  targets, fmtDate, fmtDateShort, todayIso, pct, eff, num, lsGet, lsSet, logEv, demoData, seasonOf, realPlayers, parseBulk, wipeAll, evCode, describeEvent,
   start() { const r0 = parseHash(); S.route = r0.route; S.id = r0.id; render(); Store.boot(); },
 };
 })();

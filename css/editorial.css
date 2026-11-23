@@ -1,0 +1,270 @@
+/* Erscheinungsbild „Editorial“: gestaltet wie der Sportteil einer Zeitung.
+   Newsreader für Titel und große Zahlen (Gewicht 200), Libre Franklin für Text und Zwischentitel (400 gegen 800), IBM Plex Mono für Scouting-Codes.
+   Eine Hauptfarbe (Hallenblau: unser Team, Auswahl, Links) und ein Akzent (Signalorange: was gerade läuft, Fehler, Abspielkopf).
+   Raster 8 px. Größen 12 / 14 / 42: der Sprung zum Titel ist das Dreifache. Gliederung über Schrift und Abstand, Rahmen nur an Bedienelementen.
+   Liegt über app.css, video.css und look.css und ändert nur das Aussehen, keine Positionen. */
+
+:root {
+  --paper: #f3f0e8;        /* Zeitungspapier: Seitenfläche */
+  --surface: #fbfaf6;      /* Bedienelemente, Dialoge */
+  --surface-2: #e9e5da;
+  --ink: #16181d;
+  --ink-2: #484b53;
+  --muted: #6b6e76;
+  --line: #d9d4c8;
+  --line-2: #b3ad9f;
+  --dominant: #1b3f8b;     /* Hallenblau */
+  --dominant-soft: #e2e7f1;
+  --accent: #d9501c;       /* Signalorange */
+  --accent-soft: #f6e1d6;
+
+  --bg: var(--paper);
+  --us: var(--dominant); --us-strong: var(--dominant); --us-soft: var(--dominant-soft);
+  --them: var(--ink-2); --them-strong: var(--ink-2); --them-soft: var(--surface-2);
+  --court: #ecd8c6; --court-line: #fbfaf6; --free: #dcd8cd;
+  --playhead: var(--accent);
+  --good: var(--dominant); --good-soft: var(--dominant-soft);
+  --bad: var(--accent); --bad-soft: var(--accent-soft);
+  --warn: var(--ink-2); --warn-soft: var(--surface-2);
+  /* Abstufungen nur aus den beiden Farben und Grau */
+  --g5: var(--dominant); --g4: #8ea2cc; --g3: #c3beb2; --g2: #eba584; --g1: var(--accent);
+  --pt1: #102a63; --pt2: var(--dominant); --pt3: #5d7cbf; --pt4: #a9b9dc; --pt5: #c3beb2;
+  --lost1: #9e3712; --lost2: var(--accent); --lost3: #e88a62; --lost4: #f2bea6;
+  --earn1: #5f6269; --earn2: #85878d; --earn3: #a8a9ad; --earn4: #c9c9cb;
+  --c1: var(--dominant); --c2: var(--accent); --c3: #5d7cbf; --c4: #e88a62; --c5: #8ea2cc; --c6: #102a63; --c7: #9e3712; --c8: #6b6e76; --cn: #8c8a84; --cn2: #c3beb2;
+
+  --display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --body: "Libre Franklin", "Helvetica Neue", Helvetica, sans-serif;
+  --mono: "IBM Plex Mono", Menlo, Consolas, monospace;
+  --fs-s: 12px; --fs-m: 14px; --fs-l: 42px;      /* 14 → 42 = dreifach */
+  --lh-s: 16px; --lh-m: 24px; --lh-l: 48px;
+  --w-thin: 200; --w-heavy: 800;
+  --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px; --s6: 48px;
+  --r: 2px;
+  --shadow: none;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121316; --surface: #1b1c20; --surface-2: #26272c; --ink: #ece9e1; --ink-2: #b4b1aa; --muted: #8e8c86; --line: #2d2e33; --line-2: #4a4a4f;
+    --dominant: #8fabea; --dominant-soft: #1c2741; --accent: #f07a45; --accent-soft: #3a2117;
+    --bg: var(--paper); --us: var(--dominant); --us-strong: #3c62b8; --us-soft: var(--dominant-soft); --them: var(--ink-2); --them-strong: var(--ink-2); --them-soft: var(--surface-2);
+    --court: #4a3427; --court-line: #d9cfc4; --free: #2a2a2e; --playhead: var(--accent);
+    --good: var(--dominant); --good-soft: var(--dominant-soft); --bad: var(--accent); --bad-soft: var(--accent-soft); --warn: var(--ink-2); --warn-soft: var(--surface-2);
+    --g5: var(--dominant); --g4: #3d5486; --g3: #4a4a4f; --g2: #8a4a2f; --g1: var(--accent);
+    --pt1: #c3d2f3; --pt2: var(--dominant); --pt3: #5a78bb; --pt4: #34497a; --pt5: #4a4a4f;
+    --lost1: #f7a47f; --lost2: var(--accent); --lost3: #b45631; --lost4: #6e3520;
+    --earn1: #8e8c86; --earn2: #6f6e69; --earn3: #56554f; --earn4: #403f3b;
+    --c1: var(--dominant); --c2: var(--accent); --c3: #5a78bb; --c4: #b45631; --c5: #3d5486; --c6: #c3d2f3; --c7: #f7a47f; --c8: #8e8c86; --cn: #6f6e69; --cn2: #4a4a4f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #121316; --surface: #1b1c20; --surface-2: #26272c; --ink: #ece9e1; --ink-2: #b4b1aa; --muted: #8e8c86; --line: #2d2e33; --line-2: #4a4a4f;
+  --dominant: #8fabea; --dominant-soft: #1c2741; --accent: #f07a45; --accent-soft: #3a2117;
+  --bg: var(--paper); --us: var(--dominant); --us-strong: #3c62b8; --us-soft: var(--dominant-soft); --them: var(--ink-2); --them-strong: var(--ink-2); --them-soft: var(--surface-2);
+  --court: #4a3427; --court-line: #d9cfc4; --free: #2a2a2e; --playhead: var(--accent);
+  --good: var(--dominant); --good-soft: var(--dominant-soft); --bad: var(--accent); --bad-soft: var(--accent-soft); --warn: var(--ink-2); --warn-soft: var(--surface-2);
+  --g5: var(--dominant); --g4: #3d5486; --g3: #4a4a4f; --g2: #8a4a2f; --g1: var(--accent);
+  --pt1: #c3d2f3; --pt2: var(--dominant); --pt3: #5a78bb; --pt4: #34497a; --pt5: #4a4a4f;
+  --lost1: #f7a47f; --lost2: var(--accent); --lost3: #b45631; --lost4: #6e3520;
+  --earn1: #8e8c86; --earn2: #6f6e69; --earn3: #56554f; --earn4: #403f3b;
+  --c1: var(--dominant); --c2: var(--accent); --c3: #5a78bb; --c4: #b45631; --c5: #3d5486; --c6: #c3d2f3; --c7: #f7a47f; --c8: #8e8c86; --cn: #6f6e69; --cn2: #4a4a4f;
+  color-scheme: dark;
+}
+
+/* ---------- Schrift */
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: var(--fs-m); line-height: var(--lh-m); font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+h1 { font-family: var(--display); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: var(--w-thin); letter-spacing: -.015em; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--body); font-size: var(--fs-m); line-height: var(--lh-m); font-weight: var(--w-heavy); letter-spacing: 0; margin: 0; }
+h3 { font-size: var(--fs-m); line-height: var(--lh-m); font-weight: var(--w-heavy); margin: var(--s2) 0 0; }
+small, .small, .muted.small { font-size: var(--fs-s); line-height: var(--lh-s); }
+.mono, code, .evc-code, .vp-time { font-family: var(--mono); font-size: var(--fs-s); }
+a { color: var(--dominant); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+b, strong { font-weight: 700; }
+
+/* ---------- Kopf: Zeitungskopf mit Rubrikenleiste */
+.top { background: var(--paper); padding-top: var(--s2); }
+.brand b { font-family: var(--display); font-size: 20px; line-height: var(--lh-m); font-weight: 600; letter-spacing: -.01em; }
+.brand small { font-size: var(--fs-s); }
+.brand .logo, .brand .logo svg { color: var(--ink); }
+.tabs { background: var(--paper); border-bottom: 2px solid var(--ink); gap: 0; margin-top: var(--s1); }
+.tabs a { font-size: var(--fs-m); font-weight: 400; padding: var(--s1) var(--s2) var(--s1) 0; margin: 0 var(--s2) -2px 0; border-bottom: 4px solid transparent; color: var(--ink-2); }
+.tabs a.on { color: var(--ink); font-weight: var(--w-heavy); border-bottom-color: var(--dominant); }
+.tabs a[data-r="live"]::before { display: inline-block; content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: var(--s1); vertical-align: 1px; }
+#banner .banner { border-radius: 0; background: transparent; border-left: 4px solid var(--accent); padding: var(--s1) var(--s2); margin-top: var(--s2); }
+main { padding-top: var(--s4); padding-bottom: var(--s6); }
+
+/* ---------- Flächen weg: Bereiche stehen auf dem Papier, getrennt durch Abstand */
+.card, .empty { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 0; }
+.dash { gap: var(--s6) var(--s4); }
+.dash > .card, .card + .card { margin-top: 0; }
+.card.mt, .mt { margin-top: var(--s3); }
+.card-h { margin-bottom: var(--s1); gap: 0 var(--s2); }
+.card-h h2 { padding-top: var(--s1); border-top: 1px solid var(--ink); flex: 1 1 auto; }
+.card-h h2 + * { padding-top: var(--s1); border-top: 1px solid var(--ink); }
+.page-h { margin: 0 0 var(--s4); gap: var(--s2); align-items: flex-end; }
+.page-h p.muted { margin: var(--s1) 0 0; }
+.back { display: inline-block; font-size: var(--fs-s); margin-bottom: var(--s1); color: var(--ink-2); }
+.empty { padding: var(--s6) 0; text-align: left; }
+.empty h2 { font-family: var(--display); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: var(--w-thin); }
+.card-sum { font-size: var(--fs-m); font-weight: var(--w-heavy); padding-top: var(--s1); border-top: 1px solid var(--ink); list-style-position: inside; }
+
+/* ---------- Saisonkopf: Teamname groß und dünn, Werte als Zeile darunter */
+.tafel { padding: 0 0 var(--s6); }
+.tafel h1 { font-size: var(--fs-l); }
+.tafel-eye { margin: var(--s1) 0 0; color: var(--ink-2); }
+.tafel-facts { gap: var(--s2) var(--s4); margin: var(--s3) 0 0; padding-top: var(--s2); border-top: 1px solid var(--line); }
+.tafel-facts dt { font-size: var(--fs-s); line-height: var(--lh-s); color: var(--muted); }
+.tafel-facts dd { font-family: var(--display); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: var(--w-thin); margin: 0; }
+.tafel-facts .tafel-form dd { font-family: var(--body); }
+.form-chip { border-radius: 0; width: 24px; height: 24px; font-weight: var(--w-heavy); background: var(--surface-2); }
+.form-chip.win { background: var(--dominant); color: var(--paper); }
+.form-chip:last-child::after { background: var(--accent); left: 0; right: 0; }
+
+/* ---------- Spielbericht-Kopf */
+.game-h { padding: 0 0 var(--s2); }
+h1 .res { font-family: var(--body); font-size: var(--fs-m); font-weight: var(--w-heavy); vertical-align: middle; margin-left: var(--s2); }
+.game-h .setline { margin-top: var(--s1); gap: var(--s2); }
+.setline .pill { font-size: var(--fs-m); }
+
+/* ---------- Bedienelemente: eckig, 32 px, Rand nur hier */
+.btn { min-height: 32px; padding: 4px var(--s2); border-radius: var(--r); font-size: var(--fs-m); font-weight: 600; border: 1px solid var(--ink); background: transparent; color: var(--ink); }
+.btn:hover { background: var(--surface-2); border-color: var(--ink); }
+.btn.primary { background: var(--dominant); border-color: var(--dominant); color: var(--paper); }
+.btn.primary:hover { background: var(--pt1); border-color: var(--pt1); }
+.btn.ghost { border-color: transparent; }
+.btn.danger { color: var(--accent); border-color: var(--accent); }
+.btn.danger.ghost { border-color: transparent; }
+.btn.small { min-height: 24px; padding: 0 var(--s1); font-size: var(--fs-s); }
+.btn.big { min-height: 40px; padding: var(--s1) var(--s3); }
+.link { color: var(--dominant); }
+select, input, textarea { border-radius: var(--r); border: 1px solid var(--line-2); background: var(--surface); min-height: 32px; padding: 4px var(--s1); font-size: var(--fs-m); font-family: var(--body); }
+textarea.mono, input.mono, .dict input { font-family: var(--mono); font-size: var(--fs-s); }
+select:focus, input:focus, textarea:focus { outline: 2px solid var(--dominant); outline-offset: 0; border-color: var(--dominant); }
+.icon-btn { border-radius: var(--r); }
+.icon-btn.solid { background: var(--dominant); }
+.chip, .chip-tg span { border-radius: var(--r); min-height: 32px; padding: 4px var(--s1); }
+.chip.on, .chip-tg input:checked + span { background: var(--dominant); color: var(--paper); }
+.chip.on small { color: rgba(255, 255, 255, .8); }
+.seg-ctl { border-radius: var(--r); border-color: var(--ink); }
+.seg-ctl button.on { background: var(--ink); color: var(--paper); }
+.subtabs { gap: var(--s2); margin-bottom: var(--s3); border-bottom: 1px solid var(--line); }
+.subtabs button { padding: var(--s1) 0; font-size: var(--fs-m); font-weight: 400; border-bottom: 4px solid transparent; margin-bottom: -1px; }
+.subtabs button.on { font-weight: var(--w-heavy); border-bottom-color: var(--dominant); }
+.subtabs.inner { margin: 0 0 var(--s2); }
+.filters { gap: var(--s1); }
+fieldset { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: var(--s2) 0 0; margin: var(--s2) 0; }
+legend { font-weight: var(--w-heavy); padding: 0 var(--s1) 0 0; }
+.modal { border-radius: 0; border: 1px solid var(--ink); box-shadow: none; background: var(--paper); }
+.modal-h h2 { font-family: var(--display); font-size: 24px; line-height: var(--s4); font-weight: 400; }
+.modal-wrap { background: rgba(22, 24, 29, .55); }
+.toast { border-radius: 0; box-shadow: none; border-left: 4px solid var(--accent); }
+
+/* ---------- Tabellen: Zeilen 32 px, nur Haarlinien, Kopf in Grau */
+.tbl { font-size: var(--fs-m); line-height: var(--lh-m); }
+.tbl th, .tbl td { padding: 4px var(--s1); border-color: var(--line); }
+.tbl thead th { font-size: var(--fs-s); line-height: var(--lh-s); font-weight: 400; color: var(--muted); border-bottom: 1px solid var(--ink); padding-bottom: var(--s1); }
+.tbl tbody th { font-weight: 400; }
+.tbl tbody tr:hover > * { background: var(--surface-2); }
+.tbl tr.total th, .tbl tr.total td { font-weight: var(--w-heavy); border-top: 1px solid var(--ink); }
+.grp-h th, .grp-h td { background: transparent; font-weight: var(--w-heavy); padding-top: var(--s2); border-bottom: 1px solid var(--line-2); }
+.tbl tr.flag > * { background: var(--accent-soft); }
+
+/* ---------- Kennzahlen, Fokus, Balken */
+.kpi { padding: var(--s1) 0; border-top: 1px solid var(--line); }
+.kpi-l { font-size: var(--fs-m); }
+.kpi-v { font-family: var(--display); font-size: 24px; line-height: var(--s4); font-weight: 400; }
+.focus { padding: var(--s2) 0; border-top: 1px solid var(--line); }
+.focus .rank { font-family: var(--display); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: var(--w-thin); color: var(--accent); }
+.focus h3 { font-size: var(--fs-m); font-weight: var(--w-heavy); margin: 0; }
+.focus .impact { font-weight: var(--w-heavy); }
+.focus p { font-size: var(--fs-m); line-height: var(--lh-m); }
+.seg, .seg.tall, .hb-t, .wb { border-radius: 0; }
+.seg.tall { height: var(--s3); }
+.sw { border-radius: 0; }
+.legend { font-size: var(--fs-s); gap: 0 var(--s2); }
+
+/* ---------- Warum?: Kennzahlwahl als Rubrikenzeile, Muster als Randnotizen */
+.why-m { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; gap: var(--s2); width: auto; margin-bottom: var(--s2); }
+.why-m button { padding: var(--s1) 0; border: 0; border-bottom: 4px solid transparent; background: transparent; font-size: var(--fs-m); color: var(--ink-2); margin-bottom: -1px; }
+.why-m button.on { background: transparent; color: var(--ink); font-weight: var(--w-heavy); border-bottom-color: var(--dominant); }
+.why-sum { font-size: var(--fs-m); }
+.why-sum b { font-family: var(--display); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: var(--w-thin); margin-right: var(--s1); }
+.why-f li { border-left-width: 4px; padding-left: var(--s2); margin-top: var(--s1); }
+.why-g { gap: var(--s4) var(--s4); margin-top: var(--s3); }
+.why-t thead th:first-child { font-weight: var(--w-heavy); color: var(--ink); font-size: var(--fs-m); }
+.why-sc { border: 0; border-left: 4px solid var(--dominant); border-radius: 0; background: transparent; padding: 0 0 0 var(--s2); margin: var(--s2) 0; }
+.why-l a { padding: var(--s1) 0; }
+
+/* ---------- Listen: Spiele, Protokoll, Ballwechsel */
+.g-row { padding: var(--s1) 0; }
+.g-opp b { font-weight: 600; }
+.games li + li { border-top-color: var(--line); }
+.log li.wu, .log li.wt { border-bottom-color: var(--line); }
+.rl { margin: var(--s2) 0 0; }
+.rl-set { background: var(--paper); border-color: var(--ink); font-weight: var(--w-heavy); }
+.rl-r { padding: 4px 0 4px var(--s1); border-bottom-color: var(--line); }
+.rl-r:hover { background: var(--surface-2); }
+.rl-r.on { background: var(--accent-soft); border-left-color: var(--accent); }
+.rl-f { gap: var(--s1); margin-top: var(--s1); }
+
+/* ---------- Scouten: Spielstand als Schlagzeile, Bedienfläche bleibt griffig */
+.sb, .sb-bar { background: transparent; border: 0; border-radius: 0; }
+.sb { padding: 0 0 var(--s1); border-bottom: 1px solid var(--line); }
+.sb-sc { font-family: var(--display); font-size: var(--fs-l); line-height: var(--lh-l); font-weight: var(--w-thin); }
+.sb-sc .u { color: var(--dominant); font-weight: 600; }
+.sb-sets { font-family: var(--body); font-weight: var(--w-heavy); border-radius: 0; }
+.sb-sets.us { background: var(--dominant); color: var(--paper); }
+.sb-bar { border-bottom: 2px solid var(--ink); padding: var(--s1) 0; margin-bottom: var(--s2); }
+.gb, .tb, .pl, .slot, .zb { border-radius: var(--r); }
+.gb.win { color: var(--dominant); font-weight: var(--w-heavy); }
+.gb.lose { color: var(--accent); font-weight: 600; }
+.pad-r.hot { background: var(--dominant-soft); }
+.pl.sel { background: var(--dominant); border-color: var(--dominant); }
+.pl .no, .slot .no { font-weight: var(--w-heavy); }
+.lv-side .card + .card { margin-top: var(--s4); }
+
+/* ---------- Video: Bild ohne Rahmen, Werkzeugzeile auf dem Papier */
+.vp { background: transparent; border-radius: 0; padding: 0; }
+.vp-tl { background: var(--surface-2); border-bottom: 0; }
+.vp-segs span { background: var(--g4); }
+.vp-segs span.cur { background: var(--dominant); }
+.vp-ctl { padding: var(--s1) 0 0; }
+.vp-cut { padding: var(--s1) 0 0; border-top-color: var(--line); }
+.vp-pick h2 { font-family: var(--display); font-size: 24px; line-height: var(--s4); font-weight: 400; }
+
+/* ---------- Spielfeld, Zonen, Aufstellungen */
+.zgrid, .zheat, .lu-c { border-radius: 0; }
+.zb.on, .zb:active { background: var(--dominant); border-color: var(--dominant); }
+.zb.sug { box-shadow: inset 0 0 0 2px var(--accent); }
+.lu-c { border-top-color: var(--ink); }
+.lu figcaption { font-size: var(--fs-s); }
+
+/* ---------- Kader anlegen */
+.kd-side { padding-top: var(--s1); border-top: 1px solid var(--ink); }
+.kd-t input, .kd-t select { min-height: 32px; }
+.kd-e { color: var(--accent); }
+
+@media (max-width: 600px) {
+  :root { --fs-l: 32px; --lh-l: 40px; }
+  .tabs a { margin-right: var(--s2); padding-right: 0; }
+  main { padding-top: var(--s3); }
+  .dash { gap: var(--s4); }
+}
+
+/* Warum-Tabellen bleiben in ihrer Spalte */
+.why-t { table-layout: fixed; }
+.why-t th:first-child { width: 44%; overflow-wrap: anywhere; }
+.why-t th:nth-child(2), .why-t td.why-c { width: 20%; }
+.why-t th:nth-child(3), .why-t td.why-p { width: 14%; }
+.why-b { width: auto; min-width: 0; }
+/* Die Spielklasse ist Text, keine Zahl: kleiner als die Werte daneben */
+.tafel-facts div:nth-child(3) dd { font-family: var(--body); font-size: var(--fs-m); line-height: var(--lh-m); font-weight: 600; padding-top: var(--s2); }
+
+/* Daten steht in der Kopfzeile, nicht mehr in der Rubrikenleiste */
+.top-r { display: flex; align-items: center; gap: var(--s2); }
+.top-link { font-size: var(--fs-m); color: var(--ink-2); text-decoration: none; }
+.top-link:hover, .top-link.on { color: var(--ink); text-decoration: underline; text-decoration-color: var(--dominant); text-decoration-thickness: 2px; }
+.top-link.on { font-weight: var(--w-heavy); }
+.sec-h { margin: var(--s6) 0 var(--s2); padding-top: var(--s1); border-top: 1px solid var(--ink); }

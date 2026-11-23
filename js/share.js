@@ -119,7 +119,7 @@
     return s;
   }
 
-  /* ---------------------------------------------------------- Pilot-Test: Kriterien aus der Marktanalyse */
+  /* ---------------------------------------------------------- Wie gut der automatische Schnitt war: aus den Korrekturen beim Scouten */
   function cutQuality(g) {
     const cut = g.cut; if (!cut || !cut.stats || !cut.stats.auto) return null;
     const a = V.analysis(g); const st = cut.stats;
@@ -132,35 +132,6 @@
     const total = right + st.removed + missed;
     return { right, removed: st.removed, missed, rate: total ? right / total : null, rallies: a.rallies.length };
   }
-  const median = (arr) => { if (!arr.length) return null; const a = arr.slice().sort((x, y) => x - y); const m = Math.floor(a.length / 2); return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
-  HOOK.pilotHtml = () => {
-    const pl = S.settings.pilot || {};
-    const vids = V.realGames().filter((g) => g.videoFile && g.status === 'done').sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    const q = vids.map(cutQuality).filter((x) => x && x.rate !== null);
-    const allRight = q.reduce((s, x) => s + x.right, 0), allTot = q.reduce((s, x) => s + x.right + x.removed + x.missed, 0);
-    const hit = allTot ? allRight / allTot : null;
-    const mins = vids.filter((g) => g.scoutMs).map((g) => g.scoutMs / 60000);
-    const med = median(mins);
-    const held = pl.played ? (+pl.scouted || 0) / +pl.played : null;
-    const paid = +pl.paid || 0;
-    const row = (name, goal, value, ok, due) => '<tr><th scope="row" class="l">' + name + '</th><td class="l">' + goal + '</td><td>' + value + '</td><td>' + (ok === null ? '<span class="pill">offen</span>' : ok ? '<span class="pill ok">erfüllt</span>' : '<span class="pill bad">nicht erfüllt</span>') + '</td><td>' + due + '</td></tr>';
-    const inp = (k, label) => '<label>' + label + '<input type="text" inputmode="numeric" data-num="int" maxlength="3" data-pl="' + k + '" value="' + esc(pl[k] === undefined ? '' : pl[k]) + '"></label>';
-    return '<div class="dash"><section class="card span2"><div class="card-h"><h2>Trägt es?</h2><span class="muted small">Kriterien aus der Marktanalyse</span></div><div class="tbl-wrap"><table class="tbl cmd"><thead><tr><th>Kriterium</th><th>Ziel</th><th>Stand</th><th>Bewertung</th><th>Stichtag</th></tr></thead><tbody>' +
-      row('Ballwechsel richtig erkannt', 'mind. 90 %', hit === null ? '–' : pct(hit) + ' (' + allRight + ' von ' + allTot + ')', hit === null ? null : hit >= 0.9, '31.12.2026') +
-      row('Zeit pro Spiel (Median)', 'höchstens 30–45 Min.', med === null ? '–' : Math.round(med) + ' Min. (' + mins.length + (mins.length === 1 ? ' Spiel)' : ' Spiele)'), med === null ? null : med <= 45, '31.12.2026') +
-      row('Zahlungsbereitschaft', 'mind. 5 von 20 Teams zahlen 49 € vorab', pl.asked ? paid + ' von ' + (+pl.asked) : '–', pl.asked ? paid >= 5 : null, '28.02.2027') +
-      row('Durchhalten nach 6 Wochen', 'mind. 70 % der Spiele gescoutet', held === null ? '–' : pct(held), held === null ? null : held >= 0.7, '30.04.2027') +
-      '</tbody></table></div><p class="small muted">Bleibt ein Kriterium unerfüllt, sieht der Plan kommerziell das Ende vor. Das Tool bleibt dann fürs eigene Team.</p></section>' +
-      '<section class="card span2 form"><h2>Von Hand eintragen</h2><div class="grid3">' + inp('asked', 'Angesprochene Teams') + inp('paid', 'Davon haben bezahlt') + inp('played', 'Spiele in den 6 Wochen') + inp('scouted', 'Davon gescoutet') + '</div></section>' +
-      '<section class="card span2"><h2>Spiele aus dem Video</h2>' + (vids.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Datum</th><th>Gegner</th><th>Minuten</th><th>Punkte im Spiel</th><th>Im Schnitt erkannt</th><th>Falsch erkannt</th><th>Verpasst</th><th>Treffer</th></tr></thead><tbody>' +
-        vids.map((g) => { const x = cutQuality(g); return '<tr><td>' + V.fmtDateShort(g.date) + '</td><th scope="row"><a href="#spiel-' + g.id + '">' + esc(g.opponent) + '</a></th><td>' + (g.scoutMs ? Math.round(g.scoutMs / 60000) : '–') + '</td><td>' + V.analysis(g).rallies.length + '</td><td>' + (x ? x.right + x.removed : '–') + '</td><td>' + (x ? x.removed : '–') + '</td><td>' + (x ? x.missed : '–') + '</td><td>' + (x ? pct(x.rate) : '–') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">Sobald ein Spiel aus dem Video abgeschlossen ist, stehen hier Dauer und Trefferquote des Schnitts. Falsch erkannte Ballwechsel korrigierst du beim Scouten mit „Kein Ballwechsel“, verpasste mit „Hier fängt einer an“.</p>') + '</section></div>';
-  };
-  document.addEventListener('change', (e) => {
-    const k = e.target.dataset && e.target.dataset.pl; if (!k) return;
-    const p = S.settings.pilot || (S.settings.pilot = {});
-    const v = e.target.value.trim(); if (v === '') delete p[k]; else p[k] = +v;
-    Store.saveSettings(); V.render();
-  });
 
   /* ---------------------------------------------------------- Hilfe */
   HOOK.helpExtra = () => '<section class="card span2"><h2>Tasten beim Video-Scouten</h2><div class="tbl-wrap"><table class="tbl cmd"><tbody>' +

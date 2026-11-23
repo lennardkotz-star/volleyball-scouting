@@ -32,7 +32,7 @@ function simGame(seed, opt) {
   }
   return { samples, truth, dur };
 }
-/* Trefferquote wie im Pilot: Ballwechsel gilt als gefunden, wenn genau ein Abschnitt ihn überwiegend abdeckt */
+/* Trefferquote des Schnitts: Ballwechsel gilt als gefunden, wenn genau ein Abschnitt ihn überwiegend abdeckt */
 function score(res, truth) {
   let hit = 0; const used = new Set();
   truth.forEach(([s, e]) => {
@@ -107,6 +107,34 @@ function play(events, extra) { return C.analyzeGame(Object.assign({ id: 'x', sta
 }
 ok('Aufschlagzone: alter Mittelstreifen wird Hinterfeld', C.serveZone(7) === 5 && C.serveZone(8) === 6 && C.serveZone(9) === 1);
 ok('Aufschlagzone: die sechs Positionen bleiben', [1, 2, 3, 4, 5, 6].every((z) => C.serveZone(z) === z));
+/* Zusammenhänge: Vorgeschichte je Ballwechsel */
+{
+  const lu = ['a', 'b', 'c', 'd', 'e', 'f'];
+  const A = (p, sk, g) => ({ k: 'a', p, sk, g });
+  const game = { id: 'w1', events: [
+    { k: 'set', s: 1, srv: 'u', lu, zsp: 'a', lib: [] },
+    A('a', 'S', '#'),                       // 1:0 Ass, erster des Satzes
+    A('a', 'S', '='),                       // 1:1 Aufschlagfehler nach Ass
+    A('b', 'R', '='),                       // 1:2 Ass gegen uns nach Aufschlagfehler
+    { k: 'to', w: 'u' },
+    A('b', 'R', '#'), A('c', 'A', '#'),     // 2:2 Kill nach Annahme 3, direkt nach Auszeit
+    A('b', 'S', '0'), { k: 'opp', r: 'pt' },// 2:3
+  ] };
+  const a = C.analyzeGame(game, {});
+  const rs = C.rallyRecords(game, a);
+  ok('Warum: ein Datensatz je Ballwechsel', rs.length === 5, String(rs.length));
+  ok('Warum: erster Ballwechsel ohne Vorgeschichte', rs[0].prev === 'first' && rs[0].mom === 'first');
+  ok('Warum: Ballwechsel davor wird erkannt', rs[1].prev === 'ace' && rs[2].prev === 'srverr' && rs[3].prev === 'recerr' && rs[4].prev === 'kill', rs.map((x) => x.prev).join());
+  ok('Warum: Auszeit davor wird erkannt', rs[3].mom === 'tou', rs[3].mom);
+  ok('Warum: Serie des Gegners wird erkannt', C.rallyRecords({ id: 'x', events: [{ k: 'set', s: 1, srv: 't', lu, zsp: 'a' }, { k: 'opp', r: 'pt' }, { k: 'opp', r: 'pt' }, { k: 'opp', r: 'pt' }] }, C.analyzeGame({ id: 'x', events: [{ k: 'set', s: 1, srv: 't', lu, zsp: 'a' }, { k: 'opp', r: 'pt' }, { k: 'opp', r: 'pt' }, { k: 'opp', r: 'pt' }] }, {}))[2].mom === 'runt');
+  const acts = C.actionRecords(game, rs);
+  const kill = acts.find((x) => x.e.sk === 'A');
+  ok('Warum: Angriff kennt seine Annahme', kill.touch === 'R#', kill.touch);
+  const g2 = C.groupRate(acts.filter((x) => x.e.sk === 'R'), (x) => x.e.p, (x) => x.e.g === '=');
+  ok('Warum: Bezugsmenge stimmt', g2.length === 1 && g2[0].n === 2 && g2[0].h === 1);
+  ok('Warum: kleine Unterschiede sind kein Muster', !C.sigDiff(3, 10, 2, 10) && C.sigDiff(30, 100, 10, 100));
+  ok('Warum: Minimal-Spiele liefern keine falschen Quoten', C.rallyRecords(Object.assign({}, game, { minimal: true }), a).length === 0);
+}
 const bad = out.filter((x) => !x.cond);
 document.getElementById('sum').textContent = bad.length ? bad.length + ' von ' + out.length + ' Tests fehlgeschlagen' : 'Alle ' + out.length + ' Tests bestanden';
 document.getElementById('out').innerHTML = out.map((x) => '<li class="' + (x.cond ? 'ok' : 'bad') + '">' + x.name + (x.info ? ' <small>(' + x.info.replace(/</g, '&lt;') + ')</small>' : '') + '</li>').join('');

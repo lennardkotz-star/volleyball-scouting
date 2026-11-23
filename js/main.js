@@ -12,6 +12,8 @@
     view.querySelectorAll('.tbl:not(.imp):not(.cmd) td').forEach((td) => { if (td.children.length === 0 && td.textContent.trim() === '0') { td.textContent = '·'; td.classList.add('nil'); td.title = '0'; } });
     if (V.S.route !== 'details') delete view.dataset.dr;
     if (V.S.route !== 'karte') delete view.dataset.shared;
+    if (V.S.route !== 'kader') delete view.dataset.kd;
+    if (V.S.route !== 'video') delete view.dataset.vw;
   };
   V.start();
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || /[?&]sw\b/.test(location.search))) {

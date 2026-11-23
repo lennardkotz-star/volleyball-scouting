@@ -7,7 +7,7 @@
     root: null, el: null, gameId: null, file: null, url: null, auto: V.lsGet('vst:vAuto') !== '0', speed: +(V.lsGet('vst:vSpeed') || 1),
     seg: -1, closed: false, waiting: false, job: null, jobPct: 0, jobHidden: false, lastTouch: Date.now(), handle: null,
   };
-  const gameOf = () => (S.route === 'details' ? V.gameById(S.id) : V.liveGame());
+  const gameOf = () => (S.route === 'details' || S.route === 'video' ? V.gameById(S.id) : V.liveGame());
   const ralliesOf = (g) => (g && g.cut && g.cut.rallies) || [];
   const newStats = () => ({ auto: 0, added: 0, removed: 0 });
 
@@ -188,6 +188,7 @@
       return;
     }
     if (!VID.auto || S.route === 'details') return;
+    if (S.route === 'video') { jumpNext(t); return; } // Nachschauen: nichts einzutragen, einfach weiter
     const inSet = (V.analysis(g).cur || {}).inSet;
     if (VID.seg >= 0 && t >= rs[VID.seg].e && !VID.closed && inSet) {
       v.pause(); VID.waiting = true; setWait('Wer hat den Punkt gemacht?'); return; // erst den Punkt eintragen
@@ -241,7 +242,7 @@
     VID.waiting = false; setWait(null);
     if (i >= 0) { VID.seg = i; VID.closed = true; VID.el.currentTime = rs[i].s; drawTimeline(); drawCut(g); }
   };
-  /* Korrektur mit einem Tipp – die Zahlen fließen in die Trefferquote im Pilot-Test */
+  /* Korrektur mit einem Tipp – die Zahlen zeigen, wie gut der automatische Schnitt war */
   ACT.vmark = () => {
     const g = gameOf(); if (!g) return;
     if (!g.cut) g.cut = { rallies: [], stats: newStats(), mode: 'hand' };
@@ -356,7 +357,7 @@
     inp.click();
   };
 
-  /* ---------------------------------------------------------- Scout-Zeit (nur aktive Zeit, für das Pilot-Kriterium) */
+  /* ---------------------------------------------------------- Scout-Zeit (nur aktive Zeit): wie lange ein Spiel aus dem Video dauert */
   ['pointerdown', 'keydown'].forEach((n) => document.addEventListener(n, () => { VID.lastTouch = Date.now(); }, { passive: true }));
   setInterval(() => {
     if (document.visibilityState !== 'visible' || S.route !== 'live') return;
@@ -365,5 +366,13 @@
     if (active) g.scoutMs = (g.scoutMs || 0) + 5000;
   }, 5000);
 
-  window.VST.video = { VID, setFile, attach, startCut, jumpNext, mount };
+  /** Springt an eine Stelle und spielt ab. Falsch, wenn zu diesem Spiel noch kein Video offen ist. */
+  function seek(g, t) {
+    if (!VID.el || !VID.file || VID.gameId !== g.id) return false;
+    VID.waiting = false; VID.closed = true; setWait(null);
+    VID.el.currentTime = Math.max(0, t); VID.seg = ralliesOf(g).findIndex((r) => t >= r.s && t < r.e);
+    VID.el.play().catch(() => {}); drawTimeline(); drawCut(g);
+    return true;
+  }
+  window.VST.video = { VID, setFile, attach, startCut, jumpNext, mount, seek };
 })();

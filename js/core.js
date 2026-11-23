@@ -1240,6 +1240,81 @@
   }
   /** Aufschlag und Annahme kennen nur die sechs Positionen des Feldes. Alte Einträge aus dem Mittelstreifen 7/8/9 liegen hinter der Angriffslinie, gehören also zu 5/6/1. */
   function serveZone(z) { return { 7: 5, 8: 6, 9: 1 }[z] || z; }
+
+  /* ------------------------------------------------------------------ Zusammenhänge: jeder Ballwechsel mit seiner Vorgeschichte */
+  const WHY_L = {
+    phase: { start: 'Satzanfang', mid: 'Satzmitte', crunch: 'Schlussphase' },
+    diff: { ahead: 'Führung ab 3', close: 'Knapp (bis ±2)', behind: 'Rückstand ab 3' },
+    prev: {
+      first: 'Erster des Satzes', ace: 'Unser Ass', kill: 'Unser Kill', block: 'Unser Block', opperr: 'Fehler Gegner', won: 'Punkt für uns',
+      srverr: 'Unser Aufschlagfehler', recerr: 'Ass gegen uns', atterr: 'Unser Angriffsfehler', attblk: 'Wir geblockt', digerr: 'Abwehr nicht gehalten', blkerr: 'Blockfehler', fault: 'Netz, Linie, Ball', opppt: 'Gegner punktet', lost: 'Punkt Gegner',
+    },
+    mom: { first: 'Satzbeginn', tou: 'Nach eigener Auszeit', tot: 'Nach Auszeit Gegner', sub: 'Nach Wechsel', runu: 'Wir auf Serie (2+)', runt: 'Gegner auf Serie (2+)', even: 'Sonst' },
+    touch: { 'R#': 'Nach Annahme 3', 'R+': 'Nach Annahme 2', 'R-': 'Nach Annahme 1', 'D#': 'Konter nach Abwehr 3', 'D+': 'Konter nach Abwehr 2', 'D-': 'Konter nach Abwehr 1', none: 'Ohne erfasste Vorstufe' },
+  };
+  function prevKey(e, w) {
+    if (!e) return w === 'u' ? 'won' : 'lost';
+    if (e.k === 'opp') return e.r === 'err' ? 'opperr' : 'opppt';
+    if (e.k !== 'a') return w === 'u' ? 'won' : 'lost';
+    if (w === 'u') return e.sk === 'S' ? 'ace' : e.sk === 'A' ? 'kill' : e.sk === 'B' ? 'block' : 'won';
+    if (e.sk === 'S') return 'srverr';
+    if (e.sk === 'R') return 'recerr';
+    if (e.sk === 'A') return e.g === '/' ? 'attblk' : 'atterr';
+    if (e.sk === 'D') return 'digerr';
+    if (e.sk === 'B') return 'blkerr';
+    return e.sk === 'F' ? 'fault' : 'lost';
+  }
+  /** Ein Datensatz je Ballwechsel: Spielphase, Abstand, wie der Ballwechsel davor endete, was direkt davor war */
+  function rallyRecords(game, a) {
+    if (!a || !a.live || game.minimal || !Array.isArray(game.events)) return [];
+    const ev = game.events; const out = [];
+    let prev = null, run = 0;
+    a.rallies.forEach((r) => {
+      if (prev && prev.set !== r.set) { prev = null; run = 0; }
+      const tg = setTarget(a.fmt, r.set); const hi = Math.max(r.before[0], r.before[1]); const d = r.before[0] - r.before[1];
+      const rec = {
+        gid: game.id, r, set: r.set, rot: r.rot, srv: r.srv, w: r.w, before: r.before, after: r.after,
+        phase: hi >= tg - 5 ? 'crunch' : hi < (tg <= 15 ? 5 : 8) ? 'start' : 'mid',
+        diff: d >= 3 ? 'ahead' : d <= -3 ? 'behind' : 'close',
+        prev: prev ? prevKey(ev[prev.end], prev.w) : 'first', mom: 'first',
+      };
+      if (prev) {
+        let to = null, sub = false;
+        for (let i = prev.end + 1; i < r.ev[0]; i++) { const x = ev[i] || {}; if (x.k === 'to') to = x.w === 't' ? 't' : 'u'; if (x.k === 'sub') sub = true; }
+        rec.mom = to ? 'to' + to : sub ? 'sub' : run >= 2 ? 'runu' : run <= -2 ? 'runt' : 'even';
+      }
+      out.push(rec);
+      run = r.w === 'u' ? Math.max(run, 0) + 1 : Math.min(run, 0) - 1;
+      prev = r;
+    });
+    return out;
+  }
+  /** Alle bewerteten Aktionen mit Ballwechsel und der Vorstufe davor (bei Angriffen: Annahme oder Abwehr) */
+  function actionRecords(game, recs) {
+    const out = [];
+    recs.forEach((rec) => {
+      let touch = null;
+      rec.r.ev.forEach((i) => {
+        const e = game.events[i]; if (!e || e.k !== 'a') return;
+        out.push({ e, i, rec, touch: e.sk === 'A' ? (touch && touch.g !== '=' ? touch.sk + touch.g : 'none') : null });
+        if (e.sk === 'R' || e.sk === 'D') touch = e; else if (e.sk === 'A') touch = null;
+      });
+    });
+    return out;
+  }
+  /** Unterschied zweier Quoten, der über Zufall hinausgeht (einseitig, etwa 95 %) */
+  function sigDiff(h1, n1, h2, n2) {
+    if (!n1 || !n2) return false;
+    const p1 = h1 / n1, p2 = h2 / n2, p = (h1 + h2) / (n1 + n2);
+    const se = Math.sqrt(p * (1 - p) * (1 / n1 + 1 / n2));
+    return se > 0 && Math.abs(p1 - p2) / se >= 1.64;
+  }
+  /** Gruppiert Fälle nach einem Merkmal und zählt Treffer. Fälle ohne Merkmal (null) zählen nicht mit. */
+  function groupRate(items, keyFn, hitFn) {
+    const m = new Map();
+    items.forEach((it) => { const k = keyFn(it); if (k === null || k === undefined) return; const b = m.get(k) || { k, n: 0, h: 0, items: [] }; b.n++; if (hitFn(it)) b.h++; b.items.push(it); m.set(k, b); });
+    return Array.from(m.values());
+  }
   /** Lassen sich Aktionen im verlinkten Video anspringen? (fester Bezugspunkt oder Zeitstempel aus dem Video-Scouting) */
   function videoSynced(game) {
     const v = game && game.video; if (!v || !v.url) return false;
@@ -1343,7 +1418,7 @@
     zc, addCounts, sum, analyzeGame, boxToCounts, boxIssues, metrics, rkMetrics, aggregate, targetsFor, insights, playerNotes,
     numStr, pctStr, effStr, norm, wordNum, lev, parseCommands, splitSegments, describeAct,
     validateBox, validateSets, validateNSets, validateTotals, fullBox, checkAction, BOX_FIELDS,
-    parseVideo, videoLink, videoSec, videoSynced, serveZone, hms, parseHms, DEMO_ROSTER, demoGames, simulateEvents, rng32,
+    parseVideo, videoLink, videoSec, videoSynced, serveZone, WHY_L, rallyRecords, actionRecords, sigDiff, groupRate, hms, parseHms, DEMO_ROSTER, demoGames, simulateEvents, rng32,
   };
 });
 

@@ -12,7 +12,7 @@
   // Reihenfolge wie im Codebook: aus Sicht der Mannschaft in diesem Feld
   const OWN_GRID = [4, 3, 2, 7, 8, 9, 5, 6, 1];
   const OPP_GRID = [1, 6, 5, 9, 8, 7, 2, 3, 4];   // Gegnerhälfte von unserer Seite gesehen, Netz unten
-  // Aufschlag und Annahme: nur die sechs Positionen, Vorderfeld 3 m und Hinterfeld 6 m tief
+  // Aufschlag, Annahme, Abwehr und Gegnerpunkte: die sechs Positionen, Vorderfeld 3 m und Hinterfeld 6 m tief. Nur der Angriff zielt auf 9 Zonen.
   const OWN_SIX = [4, 3, 2, 5, 6, 1];
   const OPP_SIX = [1, 6, 5, 2, 3, 4];
   const COARSE = { 1: '1', 9: '1', 2: '1', 6: '6', 8: '6', 3: '6', 5: '5', 7: '5', 4: '5' };
@@ -52,8 +52,19 @@
   const blockKey = (e) => (e.k === 'a' ? { S: 'srvZone', A: 'attDir', D: 'digZone', R: 'recZone' }[e.sk] : e.k === 'opp' && e.r === 'pt' ? 'oppAtt' : null);
   const enabled = (g, e) => { const k = blockKey(e); return k && g.detail && g.detail[k]; };
   const onOppHalf = (e) => e && e.k === 'a' && (e.sk === 'S' || e.sk === 'A');
-  const sixZones = (e) => e && e.k === 'a' && (e.sk === 'S' || e.sk === 'R');
+  const sixZones = (e) => e && ((e.k === 'a' && (e.sk === 'S' || e.sk === 'R' || e.sk === 'D')) || (e.k === 'opp' && e.r === 'pt'));
   const gridFor = (e) => (sixZones(e) ? (e.sk === 'S' ? OPP_SIX : OWN_SIX) : onOppHalf(e) ? OPP_GRID : OWN_GRID);
+  /** Annahme und Abwehr: Vorschlag aus Rolle und Position. Nur eine Markierung, gezählt wird erst der Tipp. */
+  function homeZone(e, lu) {
+    if (!e || e.k !== 'a' || (e.sk !== 'R' && e.sk !== 'D') || !e.p) return null;
+    const role = (V.player(e.p) || {}).role;
+    if (role === 'LIB') return 5;
+    const i = lu ? lu.indexOf(e.p) : -1;
+    if (i === 1 || i === 2 || i === 3) return role === 'AA' ? 4 : role === 'MB' ? 3 : role === 'DIA' || role === 'ZSP' ? 2 : [0, 2, 3, 4][i];
+    if (role === 'DIA' || role === 'ZSP') return 1;
+    if (role === 'AA' || role === 'MB') return 6;
+    return i >= 0 ? { 0: 1, 4: 5, 5: 6 }[i] : null;
+  }
   HOOK.stampZone = (g, e) => {
     if (S.live.zone && enabled(g, e)) { e.ze = S.live.zone; }
     S.live.zone = null;
@@ -68,8 +79,8 @@
   };
   HOOK.afterLogZone = (g, a, e) => { S.live.zoneFor = enabled(g, e) && !e.ze ? e.id : null; };
   const anyBlock = (g) => g.detail && Object.keys(g.detail).some((k) => g.detail[k]);
-  function zoneGridHtml(cells, cur, act, big) {
-    return '<div class="zgrid' + (big ? ' big' : '') + (cells.length === 6 ? ' six' + (cells[0] === 1 ? ' far' : '') : '') + '">' + cells.map((z) => '<button type="button" class="zb' + (cur === z ? ' on' : '') + '" data-act="' + act + '" data-z="' + z + '">' + z + '</button>').join('') + '</div>';
+  function zoneGridHtml(cells, cur, act, big, sug) {
+    return '<div class="zgrid' + (big ? ' big' : '') + (cells.length === 6 ? ' six' + (cells[0] === 1 ? ' far' : '') : '') + '">' + cells.map((z) => '<button type="button" class="zb' + (cur === z ? ' on' : '') + (sug === z ? ' sug' : '') + '" data-act="' + act + '" data-z="' + z + '"' + (sug === z ? ' title="Vorschlag aus der Position"' : '') + '>' + z + '</button>').join('') + '</div>';
   }
   /** Welches Raster gerade passt: zur letzten Aktion, sonst zur nächsten erwarteten */
   function panelGrid(g) {
@@ -85,7 +96,8 @@
     const label = e ? (e.k === 'opp' ? 'Gegnerpunkt: wo gelandet?' : C.SKILL[e.sk].label + ': wohin?') : (S.live.zone ? 'Zone ' + S.live.zone + ' für die nächste Aktion' : 'Zone (optional)');
     const cells = panelGrid(g);
     const far = cells[0] === 1;
-    return '<div class="zp' + (e ? ' ask' : '') + '"><span class="zp-l">' + esc(label) + '<small>' + (far ? 'Gegnerhälfte, Netz unten' : 'unsere Hälfte, Netz oben') + '</small></span>' + zoneGridHtml(cells, e ? null : S.live.zone, 'zone') + '</div>';
+    const sug = e ? homeZone(e, (V.analysis(g).cur || {}).lu) : null;
+    return '<div class="zp' + (e ? ' ask' : '') + '"><span class="zp-l">' + esc(label) + '<small>' + (far ? 'Gegnerhälfte, Netz unten' : 'unsere Hälfte, Netz oben') + (sug ? ' · Vorschlag ' + sug + ' aus der Position' : '') + '</small></span>' + zoneGridHtml(cells, e ? null : S.live.zone, 'zone', false, sug) + '</div>';
   };
   function setZone(g, z) {
     const e = S.live.zoneFor ? g.events.find((x) => x.id === S.live.zoneFor) : null;
@@ -100,7 +112,7 @@
     const roleOf = (pid) => (roster[pid] || {}).role;
     const R = {
       srv: { total: 0, withZone: 0, zone: {}, byPlayer: {} }, att: { total: 0, withZone: 0, players: {} },
-      opp: { land: {}, withZone: 0, total: 0 }, dig: { zone: {} }, rec: { zone: {} },
+      opp: { land: {}, withZone: 0, total: 0 }, dig: { zone: {}, byPlayer: {} }, rec: { zone: {}, byPlayer: {} },
       set: { all: { 4: 0, M: 0, 2: 0, H: 0, n: 0 }, byRec: { '#': { 4: 0, M: 0, 2: 0, H: 0, n: 0 }, '+': { 4: 0, M: 0, 2: 0, H: 0, n: 0 }, '-': { 4: 0, M: 0, 2: 0, H: 0, n: 0 } }, side: { 4: 0, M: 0, 2: 0, H: 0, n: 0 }, byDig: { '#': { 4: 0, M: 0, 2: 0, H: 0, n: 0 }, '+': { 4: 0, M: 0, 2: 0, H: 0, n: 0 }, '-': { 4: 0, M: 0, 2: 0, H: 0, n: 0 } } },
     };
     const add = (o, k, f) => { const b = o[k] || (o[k] = { n: 0, w: 0 }); b.n++; if (f) b.w++; };
@@ -111,13 +123,18 @@
         let prev = null;
         r.ev.forEach((i) => {
           const e = g.events[i]; if (!e) return;
-          if (e.k === 'opp' && e.r === 'pt') { R.opp.total++; if (e.ze) { R.opp.withZone++; add(R.opp.land, e.ze, true); } }
+          if (e.k === 'opp' && e.r === 'pt') { R.opp.total++; if (e.ze) { R.opp.withZone++; add(R.opp.land, C.serveZone(e.ze), true); } }
           if (e.k !== 'a') return;
           if (e.sk === 'S') {
             R.srv.total++;
             if (e.ze) { R.srv.withZone++; const won = r.w === 'u'; const ze = C.serveZone(e.ze); add(R.srv.zone, ze, won); if (e.p) add(R.srv.byPlayer[e.p] || (R.srv.byPlayer[e.p] = {}), ze, won); }
-          } else if (e.sk === 'R' && e.ze) { const rz = C.serveZone(e.ze); const b = R.rec.zone[rz] || (R.rec.zone[rz] = { n: 0, sum: 0 }); b.n++; b.sum += e.g === '#' ? 3 : e.g === '+' ? 2 : e.g === '-' ? 1 : 0; }
-          else if (e.sk === 'D' && e.ze) { add(R.dig.zone, e.ze, e.g !== '='); add(R.opp.land, e.ze, false); R.opp.withZone++; }
+          } else if (e.sk === 'R' && e.ze) {
+            const rz = C.serveZone(e.ze); const b = R.rec.zone[rz] || (R.rec.zone[rz] = { n: 0, sum: 0, err: 0 }); b.n++; b.sum += e.g === '#' ? 3 : e.g === '+' ? 2 : e.g === '-' ? 1 : 0; if (e.g === '=') b.err++;
+            if (e.p) { const P = R.rec.byPlayer[e.p] || (R.rec.byPlayer[e.p] = {}); const c = P[rz] || (P[rz] = { n: 0, sum: 0 }); c.n++; c.sum += e.g === '#' ? 3 : e.g === '+' ? 2 : e.g === '-' ? 1 : 0; }
+          } else if (e.sk === 'D' && e.ze) {
+            const dz = C.serveZone(e.ze); add(R.dig.zone, dz, e.g !== '='); add(R.opp.land, dz, false); R.opp.withZone++;
+            if (e.p) { const P = R.dig.byPlayer[e.p] || (R.dig.byPlayer[e.p] = {}); add(P, dz, e.g !== '='); }
+          }
           else if (e.sk === 'A') {
             const z = e.z || startZone(e.p, r.lu, roleOf(e.p));
             const cl = setClass(z);
@@ -226,12 +243,19 @@
     if (!R.opp.withZone) return '';
     const hit = (z) => R.opp.land[z] || { n: 0, w: 0 };
     return '<section class="card"><div class="card-h"><h2>Wo die Gegnerbälle landen</h2></div>' +
-      heat(OWN_GRID, (z) => hit(z).n, (z) => { const b = hit(z); const dig = R.dig.zone[z]; return b.n ? b.n + (dig ? ' · Abwehr ' + pct(dig.w / dig.n) : '') : ''; }, 'Landezonen in unserer Hälfte') +
+      heat(OWN_SIX, (z) => hit(z).n, (z) => { const b = hit(z); const dig = R.dig.zone[z]; return b.n ? b.n + (dig ? ' · Abwehr ' + pct(dig.w / dig.n) : '') : ''; }, 'Landezonen in unserer Hälfte') + zoneMatrix(R.dig.byPlayer, (c) => pct(c.w / c.n)) +
       '<p class="small muted">Netz oben. ' + R.opp.withZone + ' Bälle mit Zone, davon ' + Object.values(R.opp.land).reduce((s, b) => s + b.w, 0) + ' Punkte des Gegners ohne Berührung.</p></section>';
   }
   function recHtml(R) {
     if (!Object.keys(R.rec.zone).length) return '';
-    return '<section class="card"><div class="card-h"><h2>Annahme nach Zone</h2></div>' + heat(OWN_SIX, (z) => (R.rec.zone[z] || {}).n || 0, (z) => { const b = R.rec.zone[z]; return b ? 'Ø ' + num(b.sum / b.n, 2) + ' · ' + b.n : ''; }, 'Annahmeschnitt je Zone') + '</section>';
+    return '<section class="card"><div class="card-h"><h2>Annahme nach Zone</h2></div>' + heat(OWN_SIX, (z) => (R.rec.zone[z] || {}).n || 0, (z) => { const b = R.rec.zone[z]; return b ? 'Ø ' + num(b.sum / b.n, 2) + ' · ' + b.n : ''; }, 'Annahmeschnitt je Zone') + zoneMatrix(R.rec.byPlayer, (c) => num(c.sum / c.n, 1)) + '<p class="small muted">Je Feld: Annahme-Schnitt und Anzahl. So siehst du, wer in welcher Zone annimmt.</p></section>';
+  }
+  /** Wer in welcher Zone: Zeilen Spieler, Spalten die sechs Positionen */
+  function zoneMatrix(byPlayer, fmt) {
+    const ids = Object.keys(byPlayer); if (!ids.length) return '';
+    const total = (id) => Object.values(byPlayer[id]).reduce((s, c) => s + c.n, 0);
+    ids.sort((a, b) => total(b) - total(a));
+    return '<div class="tbl-wrap"><table class="tbl zm mt"><thead><tr><th>Spieler</th>' + OWN_SIX.map((z) => '<th>' + z + '</th>').join('') + '<th>n</th></tr></thead><tbody>' + ids.map((id) => '<tr><th scope="row">' + esc(V.pLabel(id)) + '</th>' + OWN_SIX.map((z) => { const c = byPlayer[id][z]; return c ? '<td>' + val(fmt(c), c.n) + ' <small class="muted">' + c.n + '</small></td>' : '<td class="nil">·</td>'; }).join('') + '<td>' + total(id) + '</td></tr>').join('') + '</tbody></table></div>';
   }
   function setterHtml(R) {
     if (R.set.all.n < 5) return '';
@@ -247,8 +271,8 @@
   }
   HOOK.zonesHtml = (g) => {
     const R = compute([g]);
-    const parts = patternsHtml(R) + serveHtml(R) + attackHtml(R) + defenseHtml(R) + recHtml(R) + setterHtml(R);
-    const noteOne = '<p class="small muted">Ein einzelnes Spiel zeigt oft Zufall. Belastbarer wird es über mehrere Spiele in der Übersicht.</p>';
+    const parts = patternsHtml(R) + serveHtml(R) + attackHtml(R) + recHtml(R) + defenseHtml(R) + setterHtml(R);
+    const noteOne = '<p class="small muted">Ein einzelnes Spiel zeigt oft Zufall. Belastbarer wird es über mehrere Spiele unter Saison.</p>';
     if (!parts) return V.emptyState('Noch keine Zonen', g.minimal ? 'Dieses Spiel lief im Minimal-Modus.' : 'In diesem Spiel wurden keine Zonen erfasst. In der Detailrunde trägst du sie nach.', g.minimal ? '' : '<a class="btn primary" href="#details-' + g.id + '">Details ergänzen</a>');
     return noteOne + '<div class="dash">' + parts + '</div>';
   };
@@ -260,7 +284,7 @@
     if (S.route === 'uebersicht' && !S.id) {
       const games = V.filteredGames(); if (!games.length) return;
       const R = compute(games);
-      const html = patternsHtml(R) + serveHtml(R) + attackHtml(R) + defenseHtml(R) + setterHtml(R);
+      const html = patternsHtml(R) + serveHtml(R) + attackHtml(R) + recHtml(R) + defenseHtml(R) + setterHtml(R);
       if (html) { const box = document.createElement('div'); box.className = 'dash mt'; box.innerHTML = html; view.appendChild(box); }
     } else if (S.route === 'spieler' && S.id) {
       const dash = $('.dash', view); if (!dash) return;
@@ -295,7 +319,7 @@
       const opp = cells[0] === 1;
       h += '<p class="dr-now"><span class="muted">Satz ' + (inf.set || '?') + ' · ' + (inf.before || [0, 0]).join(':') + (e.v !== undefined ? ' · ' + C.hms(e.v) : '') + '</span><br><b>' + esc(e.k === 'opp' ? 'Gegnerpunkt' : V.pLabel(e.p) + ' · ' + C.SKILL[e.sk].label + ' ' + C.GL[e.sk][e.g]) + '</b></p>' +
         '<p class="small muted">' + (opp ? 'Gegnerhälfte, Netz unten.' : 'Unsere Hälfte, Netz oben.') + ' Die Zahlentasten gehen auch.' + '</p>' +
-        zoneGridHtml(cells, null, 'drzone', true) +
+        zoneGridHtml(cells, null, 'drzone', true, homeZone(e, ((a.rallies[inf.rally] || {}).lu))) +
         '<div class="row end"><button class="btn ghost small" data-act="drseek">Szene wiederholen</button><button class="btn small" data-act="drskip">Überspringen</button></div>';
     }
     pane.innerHTML = h;
@@ -363,16 +387,18 @@
     const games = demoOrig(); const rnd = C.rng32(4711);
     const pick = (list) => { let r = rnd(); for (const [z, w] of list) { r -= w; if (r <= 0) return z; } return list[0][0]; };
     games.forEach((g) => {
-      g.detail = PRESET.standard;
+      g.detail = PRESET.detail;
       (g.events || []).forEach((e) => {
         if (e.k === 'a' && e.sk === 'S' && e.g !== '=') e.ze = pick([[1, .42], [6, .2], [5, .3], [2, .05], [4, .03]]);
         else if (e.k === 'a' && e.sk === 'A' && e.g !== '=' ) e.ze = pick([[5, .3], [1, .22], [6, .18], [4, .12], [2, .08], [8, .1]]);
-        else if (e.k === 'a' && e.sk === 'D') e.ze = pick([[5, .34], [6, .3], [1, .24], [7, .12]]);
+        else if (e.k === 'a' && e.sk === 'D') e.ze = pick([[5, .38], [6, .34], [1, .28]]);
+        else if (e.k === 'a' && e.sk === 'R') e.ze = pick([[5, .36], [6, .3], [1, .26], [4, .04], [2, .04]]);
+        else if (e.k === 'opp' && e.r === 'pt') e.ze = pick([[5, .3], [1, .24], [6, .18], [4, .14], [2, .14]]);
       });
     });
     return games;
   };
 
   HOOK.afterMountZones = () => { if (S.route === 'details') { const g = V.gameById(S.id); if (g && $('#dr-pane')) drPane(g); } };
-  V.zones = { compute, patterns, startZone, direction, PRESET };
+  V.zones = { compute, patterns, startZone, direction, setClass, homeZone, PRESET, OWN_SIX, OPP_SIX };
 })();

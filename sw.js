@@ -1,6 +1,6 @@
 /* Volleyball Scouting – Offline-Modus: App-Dateien aus dem Speicher, im Hintergrund aktualisieren. Videos laufen nicht hierüber. */
-const CACHE = 'vst-v4';
-const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'css/app.css', 'css/video.css', 'css/look.css', 'js/core.js', 'js/idb.js', 'js/app.js', 'js/rally.js', 'js/video.js', 'js/zones.js', 'js/share.js', 'js/main.js'];
+const CACHE = 'vst-v6';
+const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'css/app.css', 'css/video.css', 'css/look.css', 'css/fonts.css', 'css/editorial.css', 'fonts/newsreader-200-800-latin.woff2', 'fonts/newsreader-200-800-latin-ext.woff2', 'fonts/libre-franklin-200-900-latin.woff2', 'fonts/libre-franklin-200-900-latin-ext.woff2', 'fonts/ibm-plex-mono-400-latin.woff2', 'fonts/ibm-plex-mono-600-latin.woff2', 'js/core.js', 'js/idb.js', 'js/app.js', 'js/rally.js', 'js/video.js', 'js/zones.js', 'js/kader.js', 'js/why.js', 'js/workspace.js', 'js/share.js', 'js/main.js'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
