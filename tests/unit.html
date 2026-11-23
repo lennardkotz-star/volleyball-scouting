@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>Tests</title>
+<style>body{font:14px system-ui;margin:20px}li.bad{color:#b3302a;font-weight:600}li.ok{color:#17763f}</style></head>
+<body><h1 id="sum">Tests laufen …</h1><ul id="out"></ul>
+<script src="../js/core.js"></script><script src="../js/rally.js"></script>
+<script>
+const C = VCore; const R = VRally; const out = []; 
+function ok(name, cond, info) { out.push({ name, cond: !!cond, info }); }
+
+/* Simuliertes Spiel mit bekannter Lösung */
+function simGame(seed, opt) {
+  const rnd = C.rng32(seed); opt = opt || {};
+  const samples = []; const truth = []; let t = 20;
+  const whistles = [];
+  const nRallies = opt.n || 90;
+  for (let i = 0; i < nRallies; i++) {
+    const wait = 3 + rnd() * 4, play = 4 + rnd() * rnd() * 25, pause = 8 + rnd() * 16;
+    const s = t, e = t + wait + play;
+    truth.push([s, e]);
+    if (rnd() > (opt.missWhistle || 0)) whistles.push({ t: s, p: 34 + rnd() * 10 });
+    if (rnd() > (opt.missWhistle || 0)) whistles.push({ t: e, p: 34 + rnd() * 10 });
+    t = e + pause;
+  }
+  const dur = t + 20;
+  for (let k = 0; k < (opt.neighbor || 0); k++) whistles.push({ t: rnd() * dur, p: 22 + rnd() * 8 });
+  const inRally = (x) => truth.findIndex(([s, e]) => x >= s + 3 && x < e);
+  for (let x = 0; x < dur; x += 0.2) {
+    const r = inRally(x) >= 0;
+    const m = (r ? 9 + rnd() * 5 : (opt.walk || 3) + rnd() * 2.5);
+    const near = whistles.find((w) => Math.abs(w.t - x) < 0.25);
+    samples.push({ t: x, m, w: near ? near.p : (rnd() < .03 ? 8 + rnd() * 6 : 0) });
+  }
+  return { samples, truth, dur };
+}
+/* Trefferquote wie im Pilot: Ballwechsel gilt als gefunden, wenn genau ein Abschnitt ihn überwiegend abdeckt */
+function score(res, truth) {
+  let hit = 0; const used = new Set();
+  truth.forEach(([s, e]) => {
+    const i = res.findIndex((r, k) => !used.has(k) && Math.min(r.e, e) - Math.max(r.s, s) > 0.6 * (e - s));
+    if (i >= 0) { hit++; used.add(i); }
+  });
+  return { recall: hit / truth.length, precision: res.length ? used.size / res.length : 0, n: res.length };
+}
+const fmt = (s) => 'gefunden ' + Math.round(s.recall * 100) + ' %, richtig ' + Math.round(s.precision * 100) + ' %, Abschnitte ' + s.n;
+[['Saubere Pfiffe', {}], ['Nachbarfeld pfeift (40 fremde Pfiffe)', { neighbor: 40 }], ['15 % Pfiffe überhört', { missWhistle: .15 }], ['Nachbarfeld und überhörte Pfiffe', { neighbor: 40, missWhistle: .15 }], ['Viel Bewegung in den Pausen', { walk: 5.5, neighbor: 20 }]].forEach(([name, o], idx) => {
+  const g = simGame(100 + idx, o);
+  const s = score(R.detect(g.samples, g.dur).rallies, g.truth);
+  ok('Schnitt: ' + name, s.recall >= .9 && s.precision >= .9, fmt(s));
+});
+{
+  const g = simGame(7, {}); const noSound = g.samples.map((x) => ({ t: x.t, m: x.m, w: 0 }));
+  const res = R.detect(noSound, g.dur); const s = score(res.rallies, g.truth);
+  ok('Schnitt: ohne Ton nur nach Bewegung', res.mode === 'bewegung' && s.recall >= .8, fmt(s) + ', Modus ' + res.mode);
+}
+ok('Schnitt: leeres Video bricht nicht', R.detect([], 0).rallies.length === 0);
+
+/* Parser mit Zonen */
+const roster = [{ id: 'a', num: 7, name: 'Max Muster', short: 'Max', aliases: [] }, { id: 'b', num: 12, name: 'Tobi Beispiel', short: 'Tobi', aliases: [] }];
+const parse = (t) => C.parseCommands(t, { roster });
+{
+  let r = parse('7a45#')[0];
+  ok('Kurzcode 7a45#', r.ok && r.act.p === 'a' && r.act.sk === 'A' && r.act.g === '#' && r.act.z === 4 && r.act.ze === 5, JSON.stringify(r));
+  r = parse('12s1+')[0];
+  ok('Kurzcode 12s1+', r.ok && r.act.p === 'b' && r.act.sk === 'S' && r.act.ze === 1, JSON.stringify(r));
+  r = parse('7a#')[0];
+  ok('Alter Kurzcode bleibt gültig', r.ok && r.act.sk === 'A' && r.act.g === '#' && r.act.ze === undefined, JSON.stringify(r));
+  r = parse('Max Angriff Kill auf fünf')[0];
+  ok('Sprache: auf fünf', r.ok && r.act.p === 'a' && r.act.ze === 5, JSON.stringify(r));
+  r = parse('Max Angriff Linie Kill')[0];
+  ok('Sprache: Linie', r.ok && r.act.dir === 'line' && r.act.g === '#', JSON.stringify(r));
+  r = parse('Tobi Aufschlag Ass')[0];
+  ok('Sprache ohne Zone unverändert', r.ok && r.act.sk === 'S' && r.act.g === '#' && r.act.ze === undefined, JSON.stringify(r));
+}
+
+/* Spiel-Logik */
+function play(events, extra) { return C.analyzeGame(Object.assign({ id: 'x', status: 'live', source: 'live', events }, extra || {}), { a: { role: 'AA' }, b: { role: 'MB' } }); }
+{
+  const ev = [{ k: 'set', s: 1, srv: 'u' }, { k: 'a', p: 'a', sk: 'S', g: '#' }, { k: 'a', p: 'a', sk: 'S', g: '+' }, { k: 'a', p: 'b', sk: 'D', g: '#' }, { k: 'a', p: 'a', sk: 'A', g: '#' }];
+  const a = play(ev);
+  ok('Abwehr 3 wird gezählt', a.players.b.D['#'] === 1, JSON.stringify(a.players.b.D));
+  const m = C.metrics(a.players.b);
+  ok('Abwehr 3 zählt als gut', m.dPos === 1 && m.dOkP === 1, 'dOkP ' + m.dOkP);
+  ok('Alte Abwehrstufen gelten weiter', C.GL.D['+'] === '2' && C.GL.D['-'] === '1');
+  ok('Spielstand stimmt', a.cur.u === 2 && a.cur.t === 0);
+}
+{
+  const ev = [{ k: 'set', s: 1, srv: 't' }, { k: 'a', p: 'a', sk: 'A', g: '#' }, { k: 'a', p: 'a', sk: 'S', g: '#' }, { k: 'a', p: 'b', sk: 'A', g: '=' }];
+  const g = { id: 'x', status: 'live', source: 'live', events: ev, minimal: true };
+  const a = C.analyzeGame(g, {});
+  const m = C.metrics(a.players.a);
+  ok('Minimal: Punkte bleiben', m.pts === 2, 'pts ' + m.pts);
+  ok('Minimal: keine falschen Quoten', m.aAtt === 0 && m.aEff === null, 'aAtt ' + m.aAtt);
+  ok('Minimal: Fehler zählen', C.metrics(a.players.b).err === 1);
+  ok('Minimal: Spielstand stimmt', a.cur.u === 2 && a.cur.t === 1);
+  const r = C.rkMetrics(a.rk);
+  ok('Minimal: Side-out bleibt', r.so === 1, 'so ' + r.so);
+  ok('Minimal: Angriff ohne Annahme erlaubt', C.checkAction(Object.assign({}, g, { events: ev.slice(0, 1) }), { k: 'a', p: 'a', sk: 'A', g: '#' }, {}) === null);
+  const agg = C.aggregate([a]);
+  ok('Minimal: Summe über Spiele', C.metrics(agg.players.a).pts === 2);
+  ok('Normalmodus: Angriff vor Annahme gesperrt', !!C.checkAction({ events: ev.slice(0, 1), status: 'live', source: 'live' }, { k: 'a', p: 'a', sk: 'A', g: '#' }, {}));
+}
+{
+  const g = { video: { url: 'https://www.youtube.com/watch?v=abcdefgh', lead: 4 }, events: [{ k: 'a', v: 100 }] };
+  ok('Video-Zeit aus Scouting', C.videoSec(g, g.events[0]) === 96);
+  ok('Video gilt als verknüpft', C.videoSynced(g) === true);
+  ok('Sprunglink', /t=96s/.test(C.videoLink(g.video, 96)));
+}
+ok('Aufschlagzone: alter Mittelstreifen wird Hinterfeld', C.serveZone(7) === 5 && C.serveZone(8) === 6 && C.serveZone(9) === 1);
+ok('Aufschlagzone: die sechs Positionen bleiben', [1, 2, 3, 4, 5, 6].every((z) => C.serveZone(z) === z));
+const bad = out.filter((x) => !x.cond);
+document.getElementById('sum').textContent = bad.length ? bad.length + ' von ' + out.length + ' Tests fehlgeschlagen' : 'Alle ' + out.length + ' Tests bestanden';
+document.getElementById('out').innerHTML = out.map((x) => '<li class="' + (x.cond ? 'ok' : 'bad') + '">' + x.name + (x.info ? ' <small>(' + x.info.replace(/</g, '&lt;') + ')</small>' : '') + '</li>').join('');
+window.RESULT = { failed: bad.map((x) => x.name + ': ' + (x.info || '')), total: out.length };
+</script></body></html>

@@ -1,0 +1,86 @@
+/* Video-Arbeitsplatz, Zonen, geteilte Karten */
+.lv.vmode { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1100px) {
+  body.vmode main { max-width: none; }
+  .lv.vmode { grid-template-columns: minmax(0, 1fr) 460px; }
+  .lv.vmode .vp-col { position: sticky; top: 56px; }
+  .lv.vmode .lv-cols { grid-template-columns: minmax(0, 1fr); }
+  .lv.vmode .lv-side { position: static; max-height: none; }
+}
+@media (max-width: 1099px) { .lv.vmode .vp-col { position: sticky; top: 0; z-index: 12; background: var(--bg); padding-bottom: 6px; } }
+.vp { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 8px; box-shadow: var(--shadow); }
+.vp-stage { position: relative; background: #000; border-radius: 6px; overflow: hidden; }
+.vp video { display: block; width: 100%; max-height: 62vh; background: #000; cursor: pointer; }
+@media (max-width: 1099px) { .vp video { max-height: 34vh; } }
+.vp-wait { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 6px 14px; border-radius: 99px; font-weight: 600; font-size: 14px; white-space: nowrap; pointer-events: none; }
+.vp-tl { position: relative; height: 22px; margin: 8px 0 6px; background: var(--surface-2); border-radius: 4px; cursor: pointer; overflow: hidden; touch-action: none; }
+.vp-segs span { position: absolute; top: 3px; bottom: 3px; background: var(--g4); border-radius: 1px; }
+.vp-segs span.m { background: var(--cn2); }
+.vp-segs span.man { background: var(--c3); }
+.vp-segs span.cur { background: var(--us); }
+.vp-head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--them); left: 0; pointer-events: none; }
+.vp-ctl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vp-ctl .btn svg { width: 16px; height: 16px; }
+.vp-ctl .btn.primary svg { fill: currentColor; }
+.vp-ctl select { min-height: 32px; padding: 3px 6px; font-size: 14px; }
+.vp-time { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink-2); margin: 0 4px; white-space: nowrap; }
+.vp-cut { margin-top: 8px; }
+.vp-fix { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.vp-prog { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.vp-pick { margin-bottom: 10px; }
+.vp-pop { width: 100%; max-height: 70vh; background: #000; border-radius: 6px; }
+.roi { position: relative; touch-action: none; cursor: crosshair; background: #000; border-radius: 6px; overflow: hidden; line-height: 0; }
+.roi canvas { width: 100%; height: auto; display: block; }
+.roi-r { position: absolute; border: 2px solid var(--them); background: rgba(207, 84, 38, .18); pointer-events: none; }
+
+/* Zonen beim Scouten */
+.zp { display: flex; gap: 10px; align-items: center; justify-content: space-between; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 10px; margin-bottom: 6px; }
+.zp.ask { border-color: var(--us); box-shadow: 0 0 0 2px var(--us-soft); }
+.zp-l { font-weight: 600; font-size: 14px; }
+.zp-l small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.zgrid { display: grid; grid-template-columns: repeat(3, 40px); gap: 3px; background: var(--court); padding: 3px; border-radius: 6px; flex: none; }
+.zb { font: inherit; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 4px; height: 30px; cursor: pointer; touch-action: manipulation; }
+.zb.on, .zb:active { background: var(--us-strong); color: #fff; border-color: var(--us-strong); }
+.zgrid.big { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 6px; max-width: 340px; margin: 8px auto; }
+.zgrid.big .zb { height: 62px; font-family: var(--display); font-size: 24px; }
+
+/* Zonen-Auswertung */
+.zheat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; max-width: 420px; }
+.zh { position: relative; min-height: 62px; padding: 6px; border-radius: 4px; background: var(--surface-2); display: flex; flex-direction: column; justify-content: space-between; isolation: isolate; font-variant-numeric: tabular-nums; }
+.zh::before { content: ""; position: absolute; inset: 0; border-radius: 4px; background: var(--us); opacity: var(--a, 0); z-index: -1; }
+.zh b { font-family: var(--display); font-size: 16px; }
+.zh span { font-size: 12px; }
+.lown { color: var(--muted); font-style: italic; }
+.zatt { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 560px) { .zatt { grid-template-columns: 150px minmax(0, 1fr); } }
+.armap { width: 100%; max-width: 220px; height: auto; display: block; margin: 0 auto; stroke-linecap: round; }
+.armap .fld { fill: var(--court); stroke: var(--court-line); stroke-width: 2; }
+.armap .netl { stroke: var(--ink-2); stroke-width: 3; }
+.armap .m3 { stroke: var(--court-line); stroke-width: 1; }
+.armap .zl { fill: var(--muted); stroke: none; font-size: 10px; text-anchor: middle; font-family: var(--body); }
+.armap .ar { opacity: .85; }
+.armap .ar.good { stroke: var(--good); } .armap .ar.bad { stroke: var(--bad); } .armap .ar.neu { stroke: var(--ink-2); }
+.ah { stroke: none; } .ah.good { fill: var(--good); } .ah.bad { fill: var(--bad); } .ah.neu { fill: var(--ink-2); }
+
+/* Detailrunde */
+.dr { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.dr .card + .card { margin-top: 0; }
+@media (min-width: 1000px) { .dr { grid-template-columns: minmax(0, 1fr) 380px; } body.vmode main { max-width: none; } }
+.dr-now { margin: 10px 0 2px; font-size: 16px; }
+.dr-prog .seg { margin-top: 6px; }
+
+@media (max-width: 600px) {
+  .vp video { max-height: 26vh; }
+  .vp { padding: 6px; }
+  .vp-tl { margin: 5px 0 4px; height: 16px; }
+  .vp-ctl label.tg { display: none; }
+  .vp-time { display: none; }
+}
+
+/* Schmale Bildschirme: Speicherstatus nur als Punkt, damit der Teamname Platz hat */
+@media (max-width: 520px) { .sync { font-size: 0; padding: 4px 6px; } .sync::before { margin-right: 0 !important; } }
+
+/* Geteilte Ansicht: keine App-Navigation */
+body.shared .top, body.shared .tabs, body.shared #banner { display: none; }
+.vlink.link { font-size: 13px; text-decoration: none; }
+.tbl.cmd .l, .tbl .l { text-align: left; white-space: normal; }

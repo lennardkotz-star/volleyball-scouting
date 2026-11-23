@@ -1,0 +1,403 @@
+/* Erscheinungsbild, angelehnt an Arbeitswerkzeuge und Sport-Apps:
+   neutrale Flächen, Text statt Dekoration, Dichte aus Sofascore und Flashscore, Fachkonventionen aus DataVolley und dem VBL-Spielbericht.
+   Abstände folgen der Zugehörigkeit (4/8 innerhalb, 12 zwischen Flächen, 24 zwischen Bereichen), nicht einem festen Raster. */
+html { overflow-x: clip; }
+body { font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-weight: 600; letter-spacing: -.005em; }
+h1 { font-size: 22px; line-height: 28px; }
+h2 { font-size: 15px; line-height: 20px; }
+h3 { font-size: 14px; line-height: 20px; margin: 12px 0 4px; }
+small, .small { font-size: 12.5px; line-height: 18px; }
+code, .mono { font-family: var(--mono); font-size: 12px; }
+a { text-underline-offset: 2px; }
+
+/* ---------- Kopf: gleiche Fläche wie die Inhalte, keine Farbfläche */
+.top { background: var(--surface); padding-top: 8px; padding-bottom: 0; }
+.brand { gap: 8px; }
+.brand .logo { width: 22px; height: 22px; background: transparent; color: var(--ink); border-radius: 0; }
+.brand .logo svg { width: 22px; height: 22px; stroke-width: 1.6; }
+.brand b { font-size: 14px; line-height: 18px; font-weight: 600; }
+.brand small { font-size: 12px; line-height: 14px; margin-top: 0; }
+.sync { background: transparent; border: 0; padding: 0; font-size: 12px; color: var(--muted); }
+.tabs { gap: 0; background: var(--surface); border-bottom: 1px solid var(--line); }
+.tabs a { font-size: 14px; font-weight: 500; padding: 8px 12px 7px; color: var(--ink-2); border-bottom-width: 2px; flex: 0 0 auto; margin-bottom: -1px; }
+.tabs a:hover { color: var(--ink); }
+.tabs a.on { color: var(--ink); font-weight: 600; border-bottom-color: var(--us); }
+.tabs a[data-r="live"]::before { display: none; }
+#banner .banner { max-width: 1200px; width: calc(100% - 32px); margin: 12px auto 0; border-radius: 6px; padding: 7px 12px; font-size: 13px; background: var(--warn-soft); }
+main { padding-top: 14px; }
+
+/* ---------- Kopf der Übersicht: Team, Bilanz in einem Satz, ein paar Werte in einer Zeile */
+.tafel { padding: 2px 2px 16px; }
+.tafel-top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 24px; }
+.tafel-eye { margin: 1px 0 0; color: var(--ink-2); }
+.tafel-act { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tafel .filters { margin: 0; gap: 6px; }
+.tafel select { min-height: 32px; padding: 4px 8px; font-size: 13px; background: var(--surface); }
+.tafel-facts { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 28px; margin: 12px 0 0; }
+.tafel-facts div { min-width: 0; }
+.tafel-facts dt { font-size: 12px; line-height: 16px; color: var(--muted); }
+.tafel-facts dd { margin: 1px 0 0; font-size: 15px; line-height: 22px; font-weight: 600; }
+.tafel-form { margin-left: auto; }
+.form-row { display: flex; gap: 3px; font-weight: 400; }
+.form-chip { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 4px; font-size: 12px; font-weight: 600; line-height: 1; color: var(--ink-2); background: var(--line); text-decoration: none; position: relative; }
+.form-chip.win { background: var(--us); color: #fff; }
+.form-chip.loss { background: var(--line); color: var(--ink-2); }
+.form-chip:last-child::after { content: ""; position: absolute; left: 3px; right: 3px; bottom: -5px; height: 2px; border-radius: 1px; background: var(--ink-2); } /* jüngstes Spiel, wie bei FotMob */
+.form-chip:hover { outline: 1px solid var(--ink-2); outline-offset: 1px; }
+.summary { display: none; }
+
+/* ---------- Flächen: große äußere Ecke, innen flach, keine Schatten */
+.card { border: 0; padding: 14px 16px 16px; border-radius: var(--r); }
+.dash { gap: 10px; }
+@media (min-width: 900px) { .dash { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } } /* Inhalte bestimmen die Breite, nicht ein 50/50-Raster */
+.card-h { margin-bottom: 8px; align-items: baseline; gap: 4px 12px; }
+.page-h { margin: 2px 0 10px; }
+.empty { border: 0; padding: 40px 16px; border-radius: var(--r); }
+.empty h2 { font-size: 16px; }
+.back { font-size: 13px; font-weight: 400; margin-bottom: 2px; }
+
+/* Kopf von Spiel, Spieler und Karte: Text und Satzergebnisse, wie der Kopf eines Spielberichts */
+.game-h { padding: 2px 2px 8px; align-items: flex-start; }
+.game-h .setline { margin: 4px 0 0; gap: 8px; }
+.setline .pill, .game-h .pill { background: transparent; padding: 0; font-size: 13px; font-weight: 400; color: var(--ink-2); border-radius: 0; }
+.setline .pill.win { color: var(--ink); font-weight: 600; }
+.setline .pill.loss { color: var(--muted); }
+.setline b { font-size: 13px; font-weight: 600; margin-left: 4px; }
+h1 .res { font-size: 22px; line-height: 28px; font-weight: 600; margin-left: 8px; vertical-align: 0; }
+.numbadge { display: inline; background: transparent; color: var(--muted); font-size: inherit; font-weight: 400; padding: 0; min-width: 0; height: auto; border-radius: 0; vertical-align: 0; }
+.numbadge::before { content: "#"; }
+
+/* ---------- Ergebnis in Zeilen: nur Text, Sieg in der Akzentfarbe, Niederlage grau */
+.res { background: transparent; padding: 0; border-radius: 0; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--muted); }
+.res.win { background: transparent; color: var(--us); }
+.res.loss { background: transparent; color: var(--muted); }
+
+/* ---------- Bedienelemente: 32 px in der Auswertung, Rahmen nur wo man klicken kann */
+.btn { min-height: 32px; padding: 5px 12px; font-size: 13px; font-weight: 500; border-radius: 6px; border-color: var(--line-2); }
+.btn svg { width: 16px; height: 16px; }
+.btn:hover { background: var(--surface-2); border-color: var(--line-2); }
+.btn.primary:hover { background: var(--us-strong); }
+.btn.small { min-height: 28px; padding: 3px 9px; font-size: 12.5px; }
+.btn.big { min-height: 38px; padding: 8px 16px; font-size: 14px; }
+.btn.ghost { border-color: transparent; }
+.btn.danger.ghost { border-color: transparent; }
+select, input, textarea { min-height: 34px; padding: 5px 9px; border-radius: 6px; border-color: var(--line-2); font-size: 13.5px; }
+.form label, .modal label { font-size: 13px; font-weight: 500; }
+.lbl { font-size: 13px; font-weight: 500; }
+.icon-btn { width: 32px; height: 32px; border-radius: 6px; }
+.icon-btn svg { width: 17px; height: 17px; }
+.icon-btn.small { width: 26px; height: 26px; }
+.icon-btn.small svg { width: 14px; height: 14px; }
+.chip, .chip-tg span { min-height: 30px; padding: 3px 9px; font-size: 13px; border-radius: 6px; }
+.chip b, .chip-tg span b { font-size: 13px; font-weight: 600; font-family: inherit; }
+.chip-tg input:checked + span { background: var(--us-soft); border-color: transparent; }
+.chip.on { background: var(--us-soft); border-color: transparent; color: var(--ink); }
+.chip.on small { color: var(--ink-2); }
+.seg-ctl { border-radius: 6px; border-color: var(--line-2); }
+.seg-ctl button { min-height: 32px; padding: 4px 12px; font-size: 13px; font-weight: 500; }
+.seg-ctl button.on { background: var(--us-soft); color: var(--us); }
+.seg-ctl button svg { width: 16px; height: 16px; }
+.subtabs { gap: 2px; margin-bottom: 10px; }
+.subtabs button { font-size: 13.5px; font-weight: 500; padding: 6px 10px 5px; border-bottom-width: 2px; margin-bottom: -1px; }
+.subtabs button.on { color: var(--ink); font-weight: 600; border-bottom-color: var(--us); }
+.subtabs.inner { margin: -4px 0 10px; }
+.subtabs.inner button { font-size: 13px; padding: 5px 8px 4px; }
+fieldset { border-radius: 6px; padding: 6px 12px 12px; margin: 8px 0; }
+legend { font-weight: 500; font-size: 13px; }
+.grid2, .grid3 { gap: 10px 12px; margin: 8px 0; }
+.modal { border-radius: 12px 12px 0 0; }
+@media (min-width: 640px) { .modal { border-radius: 12px; } }
+.modal-h h2 { font-size: 16px; }
+.toast { border-radius: 8px; font-size: 13px; padding: 8px 12px; }
+
+label.tg { display: inline-flex; align-items: center; gap: 6px; }
+input[type="checkbox"] { width: 15px; height: 15px; min-height: 0; padding: 0; flex: none; }
+
+/* ---------- Tabellen: Zeilen um 32 px, Spaltenköpfe klein und in normaler Schreibung */
+.tbl { font-size: 13px; line-height: 18px; }
+.tbl th, .tbl td { padding: 6px 8px; }
+.tbl thead th { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.tbl caption { font-size: 13px; font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0; padding: 0 0 6px; }
+.tbl tbody th { font-weight: 500; }
+.tbl tbody tr:hover > * { background: var(--surface-2); }
+.tbl tr.total th, .tbl tr.total td { font-weight: 600; border-top: 1px solid var(--line-2); }
+.tbl.compact th, .tbl.compact td { padding: 5px 6px; font-size: 13px; }
+.tbl td.nil { color: var(--muted); opacity: .7; }
+.tbl .sep { border-left-color: var(--line); }
+
+/* ---------- Kennzahlen als Tabelle: Name, Wert, Einordnung, Ziel, Verlauf in festen Spalten */
+.kpis { display: block; }
+.kpi { display: grid; grid-template-columns: 150px 72px minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 7px 0; background: transparent; border-radius: 0; border-top: 1px solid var(--line); min-height: 36px; }
+.kpi:first-child { border-top: 0; }
+.kpi-l { font-size: 13px; font-weight: 400; color: var(--ink); }
+.kpi-v { font-size: 14px; line-height: 20px; font-weight: 600; text-align: right; }
+.kpi-s { font-size: 12.5px; line-height: 16px; color: var(--muted); }
+.kpi-b { margin: 0; gap: 12px; flex-wrap: nowrap; justify-content: flex-end; }
+.kpi .pill { font-size: 12px; padding: 0; background: transparent; margin: 0; white-space: nowrap; }
+.pill.ok { background: transparent; color: var(--good); padding-inline: 0; }
+.pill.bad { background: transparent; color: var(--bad); padding-inline: 0; }
+.pill { border-radius: 4px; font-weight: 500; font-size: 12.5px; }
+.spark { display: block; width: 70px; }
+.spark path { stroke: var(--ink-2); stroke-width: 1.5; }
+.spark circle { fill: var(--ink); stroke: none; }
+.mini-kpis { gap: 0 16px; }
+.mini-kpis div { background: transparent; padding: 4px 0; border-radius: 0; }
+.mini-kpis b { font-size: 15px; font-weight: 600; font-family: inherit; line-height: 20px; }
+figure.flow figcaption { font-size: 14px; font-weight: 600; }
+figure.flow .a-us { opacity: .12; } figure.flow .a-them { opacity: .1; }
+figure.flow .ln { stroke-width: 1.5; }
+
+/* ---------- Trainingsfokus: Rangliste statt drei gleicher Karten */
+.focus-list { display: block; }
+.focus { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 5fr); gap: 2px 28px; padding: 10px 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+.focus:first-child { border-top: 0; padding-top: 2px; }
+.focus-h { grid-row: span 3; gap: 8px; }
+.focus .rank { width: auto; height: auto; background: transparent; color: var(--muted); font-size: 14px; line-height: 20px; font-weight: 400; border-radius: 0; font-family: inherit; }
+.focus .area { font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.focus h3 { margin: 0; font-size: 14px; }
+.focus .impact { font-size: 13px; line-height: 20px; font-weight: 600; color: var(--ink); font-family: inherit; }
+.focus .impact small { display: inline; font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 3px; }
+.focus p { margin: 0; font-size: 13px; line-height: 19px; color: var(--ink-2); }
+.focus .who { margin-top: 2px; }
+.focus .drill { background: transparent; padding: 0; margin-top: 4px; border-radius: 0; color: var(--ink); }
+.focus .drill b, .focus .who b { font-weight: 500; }
+@media (max-width: 720px) { .focus { grid-template-columns: minmax(0, 1fr); } .focus-h { grid-row: auto; } }
+.strengths { margin-top: 8px; font-size: 13px; }
+.notes li { margin: 2px 0; font-size: 13.5px; }
+
+/* ---------- Balken: schmal, Farbe trägt Bedeutung */
+.seg { gap: 1px; height: 8px; border-radius: 2px; }
+.seg.tall { height: 18px; border-radius: 2px; }
+.seg span { font-size: 11px; padding-left: 4px; }
+.p1 { background: var(--pt1); } .p2 { background: var(--pt2); } .p3 { background: var(--pt3); } .p4 { background: var(--pt4); } .p5 { background: var(--pt5); } .p6 { background: var(--cn2); }
+.q1 { background: var(--lost1); } .q2 { background: var(--lost2); } .q3 { background: var(--lost3); } .q4 { background: var(--lost4); }
+.q5 { background: var(--earn1); } .q6 { background: var(--earn2); } .q7 { background: var(--earn3); } .q8 { background: var(--earn4); } .q9 { background: var(--cn2); }
+.seg .p3, .seg .p4, .seg .p5, .seg .p6, .seg .q3, .seg .q4, .seg .q7, .seg .q8, .seg .q9, .seg .g4, .seg .g3, .seg .g2 { color: var(--ink); }
+.seg .q5, .seg .q6 { color: #fff; }
+.hb-t { height: 6px; border-radius: 1px; }
+.hb-t span { border-radius: 0; }
+.sw { width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+.legend { font-size: 12.5px; gap: 2px 12px; }
+.ps-h { font-size: 13px; }
+.ps-h span { font-size: 14px; font-weight: 600; font-family: inherit; }
+.ps + .ps { margin-top: 12px; }
+
+/* ---------- Spieleliste nach Flashscore: Datum, Gegner, Satzpunkte in festen Spalten, Ergebnis */
+.games li + li { border-top-color: var(--line); }
+.g-row { padding: 7px 4px; gap: 0 12px; border-radius: 0; font-size: 13px; line-height: 18px; }
+.g-date { font-size: 13px; }
+.g-opp b { font-weight: 500; }
+.g-opp small { display: inline; margin-left: 6px; font-size: 12px; }
+.g-opp b { display: inline; }
+.g-kpi { font-size: 12.5px; color: var(--muted); }
+.g-sets span { display: inline-block; min-width: 42px; color: var(--muted); font-size: 12.5px; }
+.g-sets span.won { color: var(--ink); font-weight: 600; }
+.g-sets span.muted { min-width: 0; }
+.g-row .res { justify-self: end; min-width: 28px; text-align: right; }
+.g-row { grid-template-columns: 52px minmax(0, 1fr) auto; grid-template-areas: "d o r" "d s s" "d k k"; }
+.g-sets { display: block; grid-area: s; }
+.g-opp { grid-area: o; }
+.games.compact .g-sets { display: block !important; }
+@media (min-width: 760px) {
+  .games .g-row, .games:not(.compact) .g-row, .games.compact .g-row { grid-template-columns: 52px minmax(160px, 1.2fr) minmax(220px, 1.5fr) minmax(110px, auto) 36px auto; grid-template-areas: "d o s k r t"; align-items: center; min-height: 36px; padding: 3px 4px; }
+  .games:not(.compact) .g-date, .games.compact .g-date { grid-area: d; }
+  .games:not(.compact) .g-opp, .games.compact .g-opp { grid-area: o; }
+  .games:not(.compact) .g-sets, .games.compact .g-sets { grid-area: s; display: block !important; }
+  .games:not(.compact) .g-kpi, .games.compact .g-kpi { grid-area: k; white-space: nowrap; text-align: right; }
+  .games:not(.compact) .g-row .res, .games.compact .g-row .res { grid-area: r; }
+  .games:not(.compact) .g-row .tag, .games.compact .g-row .tag { grid-area: t; }
+  .games .g-opp small { display: inline; }
+  .games .g-opp b, .games .g-opp small { overflow: visible; }
+}
+.tag { border-radius: 4px; }
+
+/* ---------- Scouten: Spielstand als Text auf der Fläche, nicht als Leuchttafel */
+.sb { background: var(--surface); border: 0; padding: 10px 14px 6px; border-radius: var(--r) var(--r) 0 0; }
+.sb-n { font-size: 13px; font-weight: 600; color: var(--ink); }
+.sb-sc { font-size: 46px; line-height: 50px; font-weight: 600; gap: 6px; font-family: inherit; }
+.sb-sc .u { color: var(--us); }
+.sb-sc .t { color: var(--ink); }
+.sb-sc .col { color: var(--muted); font-size: 32px; font-weight: 400; margin-top: -4px; }
+.srv-i { color: transparent; width: 14px; height: 14px; }
+.srv-i svg { width: 14px; height: 14px; }
+.srv-i.on { color: var(--ink-2); }
+.sb-sets { font-size: 18px; font-weight: 600; min-width: 26px; height: 26px; border-radius: 4px; font-family: inherit; }
+.sb-sets.us { background: var(--us-soft); color: var(--us); }
+.sb-sets.them { background: var(--surface-2); color: var(--ink); }
+.sb-m { font-size: 12.5px; color: var(--muted); }
+.sb-bar { background: var(--surface); border: 0; border-top: 1px solid var(--line); border-radius: 0 0 var(--r) var(--r); padding: 5px 8px; margin-bottom: 8px; }
+.sb-bar .btn { border-color: transparent; }
+.chip.clock { border-color: transparent; background: transparent; min-height: 28px; color: var(--ink-2); font-size: 13px; }
+.lv-rally { font-size: 13px; min-height: 26px; margin-bottom: 6px; }
+.evc { border-radius: 3px; border-left-width: 2px; padding: 1px 6px; }
+
+/* ---------- Spielfeld: heller Boden mit dünnen Linien und Freizone, wie im DataVolley-Bericht */
+.court { background: var(--court); border: 2px solid var(--court-line); border-radius: 0; padding: 0 8px 8px; margin: 8px; box-shadow: 0 0 0 8px var(--free); }
+.court .net { height: 10px; margin: 0 -8px 8px; border-bottom: 3px solid var(--ink); background: none; color: transparent; font-size: 0; }
+.crt { row-gap: 14px; gap: 14px 6px; background: linear-gradient(var(--court-line), var(--court-line)) 0 50% / 100% 2px no-repeat; }
+.crt .pl:nth-child(-n+3) { margin-bottom: 0; }
+.pl, .slot { min-height: 54px; border-radius: 6px; border: 1px solid var(--line-2); box-shadow: none; padding: 4px; }
+.pl .no, .slot .no { font-size: 20px; line-height: 24px; font-weight: 600; font-family: inherit; }
+.pl .nm, .slot .nm { font-size: 11.5px; line-height: 14px; color: var(--ink-2); }
+.pl .pos, .slot .pos { font-size: 10px; font-weight: 400; left: 5px; top: 2px; }
+.pl.sel { background: var(--us); border-color: var(--us); color: #fff; }
+.pl.sel .nm, .pl.sel .pos { color: rgba(255, 255, 255, .85); }
+.pl.srv { border: 1px solid var(--ink); border-style: solid; }
+.pl .srv-tag, .pl .srv-tag svg { width: 13px; height: 13px; }
+.pl:hover { border-color: var(--ink-2); }
+/* Zuspieler invertiert, Libero gelb: Konvention aus DataVolley */
+.pl.zsp .no { background: var(--ink); color: var(--surface); border-radius: 50%; min-width: 26px; height: 26px; line-height: 26px; font-size: 15px; text-align: center; }
+.pl.zsp.sel .no { background: #fff; color: var(--us); }
+.pl.lib { background: var(--warn-soft); }
+.pl.lib .no::after { content: " L"; font-size: 11px; font-weight: 500; color: var(--warn); }
+.pl.small { min-height: 34px; padding: 2px 8px; }
+.pl.small .no { font-size: 14px; line-height: 18px; }
+.bench, .plgrid { gap: 4px; margin-top: 16px; }
+.plgrid { margin-top: 4px; }
+.slot { background: rgba(255, 255, 255, .45); border: 1px dashed var(--ink-2); }
+.slot.filled { background: var(--surface); border: 1px solid var(--line-2); box-shadow: none; }
+.slot.sel { background: var(--us-soft); border: 1px solid var(--us); }
+.setup-court { max-width: 460px; }
+.lv-hint { font-size: 13px; min-height: 24px; margin: 4px 0; line-height: 22px; }
+
+/* ---------- Aktionsfeld: Bewertungen neutral, Punkt in Tinte fett, Fehler rot, wie im Bericht */
+.pad { gap: 2px; }
+.pad-r { grid-template-columns: 76px minmax(0, 1fr); border-radius: 6px; padding: 2px; gap: 4px; }
+.pad-r.hot { background: var(--surface-2); box-shadow: none; }
+.pad-l { font-size: 13px; font-weight: 500; font-family: inherit; color: var(--ink-2); }
+.pad-r.hot .pad-l { color: var(--ink); font-weight: 600; }
+.pad-b { gap: 3px; }
+.gb { min-height: 38px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--surface); font-size: 13px; font-weight: 400; }
+.gb:hover { background: var(--surface-2); border-color: var(--ink-2); }
+.gb.win { background: var(--surface); border-color: var(--line-2); color: var(--us); font-weight: 600; }
+.gb.lose { background: var(--surface); border-color: var(--line-2); color: var(--bad); font-weight: 500; }
+.gb.win:hover, .gb.lose:hover { background: var(--surface-2); border-color: var(--ink-2); }
+.lv-team { gap: 4px; margin: 8px 0 4px; }
+.tb { min-height: 42px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--surface); font-size: 13.5px; font-weight: 600; color: var(--ink); flex-direction: row; gap: 8px; }
+.tb small { font-size: 12px; font-weight: 400; color: var(--muted); opacity: 1; }
+.tb.win, .tb.lose { background: var(--surface); border-color: var(--line-2); }
+.tb.win { color: var(--us); }
+.tb.lose { color: var(--ink); }
+.tb:hover { background: var(--surface-2); border-color: var(--ink-2); }
+.dict input { min-height: 34px; font-family: var(--mono); font-size: 12.5px; }
+.dict form { gap: 4px; }
+.dict-meta { font-size: 12.5px; }
+.icon-btn.solid { background: var(--us); }
+.lv-cols { gap: 10px; }
+.lv-side .card + .card { margin-top: 10px; }
+
+/* ---------- Protokoll: Codezeilen, Punktzeilen trennen die Ballwechsel */
+.log { font-size: 13px; line-height: 18px; }
+.log li { padding: 2px 0; border-top-color: transparent; grid-template-columns: 40px minmax(0, 1fr) auto auto auto; }
+.log.full li { grid-template-columns: 40px minmax(0, 1fr) auto auto auto; }
+.log li.wu, .log li.wt { border-bottom: 1px solid var(--line); padding-bottom: 4px; margin-bottom: 2px; }
+.log li.wu .d, .log li.wt .d { font-weight: 500; }
+.log li .sc { font-weight: 400; }
+.log li.wu .sc { color: var(--us); font-weight: 600; } .log li.wt .sc { color: var(--ink); font-weight: 600; }
+.evc-code { background: transparent; padding: 0; margin-right: 8px; color: var(--muted); font-size: 12px; display: inline-block; min-width: 68px; }
+.evc-code:empty { display: none; }
+.vlink { color: var(--muted); }
+.card > h3:first-of-type { margin-top: 0; }
+
+/* ---------- Video: schwarzes Bild ohne Rahmen, darunter Werkzeugzeile. Die Zeitleiste wie im Schnittprogramm: gedämpfte Clips, roter Kopf */
+.vp { background: var(--surface); border: 0; padding: 0 0 8px; border-radius: var(--r); overflow: hidden; }
+.vp-stage { border-radius: 0; }
+.vp video { max-height: 64vh; }
+.vp-wait { background: rgba(0, 0, 0, .78); color: #fff; border-radius: 4px; bottom: 10px; font-size: 13px; font-weight: 500; padding: 4px 10px; }
+.vp-tl { height: 24px; margin: 0; background: var(--surface-2); border-radius: 0; border-bottom: 1px solid var(--line); }
+.vp-segs span { top: 4px; bottom: 4px; background: #7b93b3; border-radius: 1px; }
+.vp-segs span.m { background: #a6adb7; }
+.vp-segs span.man { background: #7fae9c; }
+.vp-segs span.cur { background: var(--us); }
+.vp-tick { position: absolute; bottom: 0; width: 1px; height: 5px; background: var(--line-2); }
+.vp-head { width: 1px; background: var(--playhead); box-shadow: none; }
+.vp-head::before { content: ""; position: absolute; top: 0; left: -3px; border: 3.5px solid transparent; border-top: 5px solid var(--playhead); border-bottom: 0; }
+.vp-ctl { padding: 6px 8px 0; gap: 2px; }
+.vp-ctl .btn { border-color: transparent; min-height: 28px; padding: 3px 7px; }
+.vp-ctl .btn:hover { background: var(--surface-2); }
+.vp-ctl .btn.primary { background: transparent; color: var(--ink); }
+.vp-ctl .btn.primary svg { fill: currentColor; }
+.vp-ctl .btn.primary:hover { background: var(--surface-2); }
+.vp-ctl select { border-color: transparent; background: transparent; min-height: 28px; }
+.vp-ctl label.tg { font-size: 12.5px !important; margin-left: auto; font-weight: 400 !important; color: var(--ink-2); }
+.vp-time { font-family: var(--mono); font-size: 12.5px; color: var(--ink); margin: 0 8px; }
+.vp-cut { margin-top: 6px; padding: 6px 8px 0; border-top: 1px solid var(--line); }
+.vp-fix .btn { border-color: var(--line-2); }
+.vp-fix .btn.primary { border-color: var(--us); }
+.vp-fix .btn.danger.ghost { border-color: var(--line-2); }
+.vp-prog { font-size: 13px; }
+.vp .seg .g5 { background: var(--us); }
+.lv.vmode { gap: 10px; }
+@media (min-width: 1100px) { .lv.vmode { grid-template-columns: minmax(0, 1fr) 420px; } .lv.vmode .vp-col { top: 44px; } }
+#vp-slot:has(~ .setup) { margin-bottom: 10px; }
+#vp-slot:has(~ .setup) video { max-height: 34vh; }
+.roi { border-radius: 2px; }
+.roi-r { border: 1px solid #fff; background: rgba(255, 255, 255, .14); }
+
+/* ---------- Zonen: Zahlen in den Feldern statt Wärmebild, Halbfeld quadratisch, Netz als dicke Linie */
+.zp { border: 0; background: transparent; padding: 2px 2px 6px; border-radius: 0; margin-bottom: 2px; }
+.zp.ask { box-shadow: none; }
+.zp.ask .zp-l { color: var(--us); }
+.zp-l { font-size: 13px; font-weight: 500; }
+.zgrid { grid-template-columns: repeat(3, 34px); gap: 1px; padding: 0; background: var(--line-2); border: 1px solid var(--line-2); border-radius: 2px; }
+.zb { border: 0; border-radius: 0; height: 26px; font-weight: 400; font-size: 13px; }
+.zb:hover { background: var(--surface-2); }
+.zb.on, .zb:active { background: var(--us); }
+.zgrid.big { max-width: 300px; gap: 1px; padding: 0; margin: 8px 0; }
+.zgrid.big .zb { height: 56px; font-size: 16px; font-family: inherit; }
+.zheat { gap: 0; max-width: 300px; aspect-ratio: 1; grid-auto-rows: 1fr; border: 1px solid var(--line-2); margin-bottom: 8px; }
+.zheat.net-oben { border-top: 3px solid var(--ink); }
+.zheat.net-unten { border-bottom: 3px solid var(--ink); }
+.zh { background: transparent; min-height: 0; border: 1px solid var(--line); border-radius: 0; padding: 4px 5px; }
+.zh::before { border-radius: 0; }
+.zh b { font-size: 11px; line-height: 14px; font-weight: 400; color: var(--muted); font-family: inherit; }
+.zh span { font-size: 12.5px; line-height: 16px; font-weight: 500; }
+.zheat.six { grid-auto-rows: auto; grid-template-rows: 1fr 2fr; }
+.zheat.six.net-unten { grid-template-rows: 2fr 1fr; }
+.zgrid.six { grid-template-rows: 22px 36px; }
+.zgrid.six.far { grid-template-rows: 36px 22px; }
+.zgrid.six .zb { height: auto; }
+.zgrid.big.six { grid-template-rows: 48px 96px; }
+.zgrid.big.six.far { grid-template-rows: 96px 48px; }
+.lown { font-style: normal; }
+.zatt { gap: 16px; }
+.armap { max-width: 200px; stroke-linecap: butt; }
+@media (min-width: 560px) { .zatt { grid-template-columns: 170px minmax(0, 1fr); } }
+.armap .fld { fill: var(--surface-2); stroke: var(--ink-2); stroke-width: 1; }
+.armap .netl { stroke: var(--ink); stroke-width: 2.5; }
+.armap .m3 { stroke: var(--ink-2); stroke-width: .75; }
+.armap .zl { fill: var(--muted); font-size: 9.5px; }
+.armap .ar { opacity: .9; }
+.armap .ar.good { stroke: var(--us); } .armap .ar.bad { stroke: var(--bad); } .armap .ar.neu { stroke: var(--g3); }
+.ah.good { fill: var(--us); } .ah.bad { fill: var(--bad); } .ah.neu { fill: var(--g3); }
+.hero-card { border-left: 0; }
+.dr-now { font-size: 14px; margin: 8px 0 2px; }
+
+/* ---------- Geteilte Ansicht */
+body.shared main { max-width: 860px; }
+
+/* ---------- Schmale Bildschirme */
+@media (max-width: 1240px) { .zatt { grid-template-columns: 120px minmax(0, 1fr); gap: 10px; } .zatt .tbl th, .zatt .tbl td { padding-inline: 4px; } }
+@media (max-width: 520px) { .sync { font-size: 0; } .sync::before { margin-right: 0 !important; } }
+@media (max-width: 819px) { .two { grid-template-columns: minmax(0, 1fr); } .two > * { min-width: 0; overflow-x: auto; } }
+@media (max-width: 720px) {
+  .tafel-form { margin-left: 0; }
+  .tafel-act { width: 100%; }
+  .tafel .filters { flex: 1 1 100%; }
+  .tafel .filters select { flex: 1 1 30%; min-width: 0; }
+  .tafel-act .btn.primary { width: 100%; }
+  .kpi { grid-template-columns: minmax(0, 1fr) auto; }
+  .kpi-v { grid-column: 2; grid-row: 1; }
+  .kpi-s { grid-column: 1 / -1; }
+  .kpi-b { grid-column: 1 / -1; justify-content: space-between; }
+  .sb-sc { font-size: 40px; line-height: 44px; }
+  .sb-sc .col { font-size: 28px; }
+  .pad-r { grid-template-columns: 62px minmax(0, 1fr); }
+  .pad-l { font-size: 12.5px; }
+  .gb { min-height: 42px; }
+  .pl { min-height: 50px; }
+  .tb small { display: none; }
+  .tabs a { padding: 8px 10px 7px; }
+  .vp-time { display: inline; margin: 0 4px; }
+}

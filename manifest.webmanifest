@@ -1,0 +1,12 @@
+{
+  "name": "Volleyball Scouting",
+  "short_name": "Scouting",
+  "description": "Volleyball-Spiele aus dem Video scouten und auswerten.",
+  "lang": "de",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef1f5",
+  "theme_color": "#eeeff1",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

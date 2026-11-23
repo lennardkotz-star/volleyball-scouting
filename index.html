@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Volleyball Scouting</title>
+<meta name="description" content="Volleyball-Spiele aus dem Video scouten: automatischer Ballwechsel-Schnitt, Statistik auf Deutsch, jeder Spieler sieht seine eigenen Werte.">
+<meta name="theme-color" content="#eeeff1">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/video.css">
+<link rel="stylesheet" href="css/look.css">
+</head>
+<body>
+<header class="top"><div class="brand"><span class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3c-1.5 3.5-1.2 7 1 9.5M21 12c-3.7-.4-6.7 1.2-8 4.6M5.2 18.2c2-3 5.2-4.5 7.8-5.7"/></svg></span><div><b id="teamName">Volleyball Scouting</b><small id="seasonLbl"></small></div></div><span class="top-r"><span id="syncChip" class="sync">Lade …</span><button class="icon-btn" id="fsBtn" data-act="fs" aria-label="Vollbild" title="Vollbild"></button></span></header>
+<nav class="tabs" id="tabs" aria-label="Hauptnavigation"><a href="#uebersicht" data-r="uebersicht">Übersicht</a><a href="#live" data-r="live">Scouten</a><a href="#spiele" data-r="spiele">Spiele</a><a href="#spieler" data-r="spieler">Spieler</a><a href="#daten" data-r="daten">Daten</a><button class="tab-fs" data-act="fs" aria-label="Vollbild beenden" title="Vollbild beenden"></button></nav>
+<div id="banner"></div>
+<main id="view"></main>
+<div id="modalRoot"></div><div id="toastRoot" aria-live="polite"></div>
+<noscript><p style="padding:16px">Diese App braucht JavaScript.</p></noscript>
+<script src="js/core.js"></script>
+<script src="js/idb.js"></script>
+<script src="js/app.js"></script>
+<script src="js/rally.js"></script>
+<script src="js/video.js"></script>
+<script src="js/zones.js"></script>
+<script src="js/share.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
